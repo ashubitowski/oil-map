@@ -37,6 +37,17 @@ export interface ProductionBasin {
   month: string; // YYYY-MM
 }
 
+export interface WellManifestEntry {
+  file: string;
+  bbox: [number, number, number, number]; // [minLon, minLat, maxLon, maxLat]
+  count: number;
+}
+
+export interface WellManifest {
+  version: number;
+  states: Record<string, WellManifestEntry>;
+}
+
 export type LayerId = "plays" | "wells" | "probability" | "production" | "wells3d";
 
 export interface LayerState {

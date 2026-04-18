@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { LayerState, LayerId, Well, ProductionBasin, ProductionHistory } from "@/lib/types";
+import { LayerState, LayerId, Well, ProductionBasin, ProductionHistory, WellManifest } from "@/lib/types";
 import { loadGeoJSON, loadJSON } from "@/lib/data-loader";
 import { readUrlState, useUrlSync, type UrlSelection } from "@/lib/use-url-state";
 import LayerToggle from "./LayerToggle";
@@ -292,35 +292,29 @@ export default function Map() {
 
       const loadAndRender = async () => {
         if (wellsDataRef.current.length === 0) {
-          // Manifest-driven loader: add new states here + in scripts/wells/registry.py
-          const REAL_STATE_FILES: Record<string, string> = {
-            TX: "/data/wells-tx.json",
-            ND: "/data/wells-nd.json",
-            CO: "/data/wells-co.json",
-            KS: "/data/wells-ks.json",
-            WY: "/data/wells-wy.json",
-            NM: "/data/wells-nm.json",
-            CA: "/data/wells-ca.json",
-          };
-          const stateKeys = Object.keys(REAL_STATE_FILES);
+          const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json");
+          const stateEntries = Object.entries(manifest.states).filter(
+            ([key]) => key !== "OFFSHORE"
+          );
+
           const results = await Promise.all([
             loadJSON<Well[]>("/data/wells.json"),
             loadJSON<Well[]>("/data/wells-offshore.json").catch(() => [] as Well[]),
-            ...stateKeys.map((s) => loadJSON<Well[]>(REAL_STATE_FILES[s]).catch(() => [] as Well[])),
+            ...stateEntries.map(([, entry]) =>
+              loadJSON<Well[]>(`/data/${entry.file}`).catch(() => [] as Well[])
+            ),
           ]);
 
           const syntheticWells = results[0] as Well[];
           const offshoreWells = results[1] as Well[];
           const stateResults = results.slice(2) as Well[][];
-          const realByState: Record<string, Well[]> = {};
-          stateKeys.forEach((s, i) => { realByState[s] = stateResults[i]; });
 
           const hasRealOffshore = offshoreWells.length > 0;
           setHasOffshore(hasRealOffshore);
 
-          const coveredStates = new Set(stateKeys.filter((s) => realByState[s].length > 0));
+          const coveredStates = new Set(stateEntries.map(([key]) => key));
           const onshoreWells = syntheticWells.filter((w) => !coveredStates.has(w.state));
-          const realWells = stateKeys.flatMap((s) => realByState[s]);
+          const realWells = stateResults.flat();
           const wells = [...onshoreWells, ...realWells, ...offshoreWells];
           wellsDataRef.current = wells;
 

@@ -3,12 +3,15 @@ Shared utilities: field extraction, date parsing, validation, and I/O.
 Mirrors the Well shape in lib/types.ts exactly.
 """
 
+import hashlib
 import json
 import math
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
+
+MANIFEST_PATH = Path("public/data/wells-manifest.json")
 
 
 def col(row: dict, *names: str) -> str:
@@ -87,6 +90,23 @@ def write_wells(wells: list, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(wells, f)
+
+
+def update_manifest(state: str, filename: str, bounds: tuple, count: int) -> None:
+    """Read-modify-write one state entry in wells-manifest.json."""
+    s, n, w, e = bounds
+    bbox = [w, s, e, n]  # GeoJSON-style [minLon, minLat, maxLon, maxLat]
+
+    if MANIFEST_PATH.exists():
+        with open(MANIFEST_PATH) as f:
+            manifest = json.load(f)
+    else:
+        manifest = {"version": 1, "states": {}}
+
+    manifest["states"][state] = {"file": filename, "bbox": bbox, "count": count}
+
+    with open(MANIFEST_PATH, "w") as f:
+        json.dump(manifest, f, indent=2)
 
 
 def write_meta(state: str, source: str, url: str, count: int, output_path: Path) -> None:

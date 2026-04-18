@@ -17,6 +17,7 @@
     "generate:wells-nm": "python3 -m scripts.wells.fetch NM",
     "generate:wells-ca": "python3 -m scripts.wells.fetch CA",
     "generate:wells-all": "python3 -m scripts.wells.fetch ALL",
+    "generate:manifest": "python3 scripts/wells/generate_manifest.py",
     "fetch:wells": "python3 -m scripts.wells.fetch",
     "scrape:rrc": "npx tsx scripts/scrape-rrc.ts"
   },

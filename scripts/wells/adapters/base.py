@@ -9,7 +9,7 @@ from typing import Iterator, Optional
 
 from scripts.wells.schema import (
     col, col_map, parse_spud_date, normalize_api,
-    is_in_bounds, write_wells, write_meta, print_summary,
+    is_in_bounds, write_wells, write_meta, print_summary, update_manifest,
 )
 
 
@@ -138,6 +138,7 @@ class Adapter(ABC):
         if not dry_run:
             write_wells(wells, cfg.output)
             write_meta(cfg.state, cfg.source_label, cfg.url, len(wells), cfg.output)
+            update_manifest(cfg.state, cfg.output.name, cfg.bounds, len(wells))
             print(f"  Wrote → {cfg.output}")
 
         return wells
