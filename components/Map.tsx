@@ -384,7 +384,7 @@ export default function Map() {
             map.on("mouseenter", "probability-fill", (e) => {
               map.getCanvas().style.cursor = "crosshair";
               const props = e.features?.[0]?.properties ?? {};
-              const bbo = typeof props.mean_bbo === "number" ? props.mean_bbo.toFixed(1) : "?";
+              const tcf = typeof props.mean_resource_tcf === "number" ? props.mean_resource_tcf.toFixed(1) : "?";
               const prob = typeof props.probability === "number" ? Math.round(props.probability * 100) : "?";
               probPopup
                 .setLngLat(e.lngLat)
@@ -393,7 +393,7 @@ export default function Map() {
                     <div style="color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Oil Resource</div>
                     <div style="font-weight:500;margin-bottom:6px">${props.Shale_play ?? "Unknown"}</div>
                     <div style="display:flex;justify-content:space-between;color:#9ca3af">
-                      <span>Est. resource</span><span style="color:#fbbf24">${bbo} BBO</span>
+                      <span>Est. resource</span><span style="color:#fbbf24">${tcf} TCF</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;color:#9ca3af;margin-top:2px">
                       <span>Relative probability</span><span style="color:#fbbf24">${prob}%</span>
