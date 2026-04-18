@@ -1,0 +1,94 @@
+[
+  {
+    "id": "permian_region",
+    "name": "Permian Basin",
+    "lon": -102.0,
+    "lat": 31.8,
+    "states": [
+      "TX",
+      "NM"
+    ],
+    "color": "#ef4444",
+    "bpd": 6186501,
+    "month": "2024-06"
+  },
+  {
+    "id": "bakken_region",
+    "name": "Bakken",
+    "lon": -103.0,
+    "lat": 47.5,
+    "states": [
+      "ND",
+      "MT"
+    ],
+    "color": "#3b82f6",
+    "bpd": 1313267,
+    "month": "2024-06"
+  },
+  {
+    "id": "eagle_ford_region",
+    "name": "Eagle Ford",
+    "lon": -98.5,
+    "lat": 28.8,
+    "states": [
+      "TX"
+    ],
+    "color": "#f97316",
+    "bpd": 1106008,
+    "month": "2024-06"
+  },
+  {
+    "id": "niobrara_region",
+    "name": "Niobrara / DJ Basin",
+    "lon": -104.5,
+    "lat": 41.0,
+    "states": [
+      "CO",
+      "WY"
+    ],
+    "color": "#ec4899",
+    "bpd": 696626,
+    "month": "2024-06"
+  },
+  {
+    "id": "anadarko_region",
+    "name": "Anadarko Basin",
+    "lon": -98.5,
+    "lat": 35.5,
+    "states": [
+      "OK",
+      "KS",
+      "TX"
+    ],
+    "color": "#f59e0b",
+    "bpd": 383090,
+    "month": "2024-06"
+  },
+  {
+    "id": "appalachia_region",
+    "name": "Appalachian Basin",
+    "lon": -80.2,
+    "lat": 40.0,
+    "states": [
+      "PA",
+      "WV",
+      "OH"
+    ],
+    "color": "#10b981",
+    "bpd": 134915,
+    "month": "2024-06"
+  },
+  {
+    "id": "haynesville_region",
+    "name": "Haynesville",
+    "lon": -93.5,
+    "lat": 32.2,
+    "states": [
+      "LA",
+      "TX"
+    ],
+    "color": "#8b5cf6",
+    "bpd": 32222,
+    "month": "2024-06"
+  }
+]

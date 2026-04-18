@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw source data (large binary files — run scripts/ to regenerate)
+/data/raw/
+
+# playwright session state
+scripts/.rrc-state.json
