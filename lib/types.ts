@@ -9,7 +9,7 @@ export interface Well {
   county: string;
   state: string;
   water_depth_ft?: number;
-  source?: "synthetic" | "rrc" | "boem" | "nd-ogic" | "co-ecmc";
+  source?: "synthetic" | "rrc" | "boem" | "nd-ogic" | "co-ecmc" | "ks-kgs" | "wy-wogcc" | "nm-ocd" | "ca-calgem";
   well_type?: "oil" | "gas" | "oil-gas" | "injection" | "disposal" | "other";
 }
 

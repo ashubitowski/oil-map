@@ -13,6 +13,10 @@ const SOURCE_LABELS: Record<string, string> = {
   boem: "BOEM OCS",
   "nd-ogic": "ND OGIC",
   "co-ecmc": "CO ECMC",
+  "ks-kgs": "KS KGS",
+  "wy-wogcc": "WY WOGCC",
+  "nm-ocd": "NM OCD",
+  "ca-calgem": "CA CalGEM",
 };
 
 export default function WellPopup({ well, onClose }: Props) {

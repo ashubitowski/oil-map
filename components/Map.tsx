@@ -226,25 +226,37 @@ export default function Map() {
     if (!map || !mapReady) return;
 
     if (layers.wells) {
+      // Manifest-driven loader: add new states here + in scripts/wells/registry.py
+      const REAL_STATE_FILES: Record<string, string> = {
+        TX: "/data/wells-tx.json",
+        ND: "/data/wells-nd.json",
+        CO: "/data/wells-co.json",
+        KS: "/data/wells-ks.json",
+        WY: "/data/wells-wy.json",
+        NM: "/data/wells-nm.json",
+        CA: "/data/wells-ca.json",
+      };
+      const stateKeys = Object.keys(REAL_STATE_FILES);
       Promise.all([
         loadJSON<Well[]>("/data/wells.json"),
         loadJSON<Well[]>("/data/wells-offshore.json").catch(() => [] as Well[]),
-        loadJSON<Well[]>("/data/wells-tx.json").catch(() => [] as Well[]),
-        loadJSON<Well[]>("/data/wells-nd.json").catch(() => [] as Well[]),
-        loadJSON<Well[]>("/data/wells-co.json").catch(() => [] as Well[]),
-      ]).then(async ([syntheticWells, offshoreWells, txWells, ndWells, coWells]) => {
-          const hasRealTx = txWells.length > 0;
-          const hasRealNd = ndWells.length > 0;
-          const hasRealCo = coWells.length > 0;
+        ...stateKeys.map((s) => loadJSON<Well[]>(REAL_STATE_FILES[s]).catch(() => [] as Well[])),
+      ]).then(async (results) => {
+          const syntheticWells = results[0] as Well[];
+          const offshoreWells = results[1] as Well[];
+          const stateResults = results.slice(2) as Well[][];
+          const realByState: Record<string, Well[]> = {};
+          stateKeys.forEach((s, i) => { realByState[s] = stateResults[i]; });
+
           const hasRealOffshore = offshoreWells.length > 0;
           setHasOffshore(hasRealOffshore);
 
-          let onshoreWells = syntheticWells;
-          if (hasRealTx) onshoreWells = onshoreWells.filter((w) => w.state !== "TX");
-          if (hasRealNd) onshoreWells = onshoreWells.filter((w) => w.state !== "ND");
-          if (hasRealCo) onshoreWells = onshoreWells.filter((w) => w.state !== "CO");
+          // Drop synthetic wells for any state where real data loaded successfully
+          const coveredStates = new Set(stateKeys.filter((s) => realByState[s].length > 0));
+          let onshoreWells = syntheticWells.filter((w) => !coveredStates.has(w.state));
+          const realWells = stateKeys.flatMap((s) => realByState[s]);
 
-          const wells = [...onshoreWells, ...txWells, ...ndWells, ...coWells, ...offshoreWells];
+          const wells = [...onshoreWells, ...realWells, ...offshoreWells];
           const geojson: GeoJSON.FeatureCollection = {
             type: "FeatureCollection",
             features: wells.map((w) => ({
