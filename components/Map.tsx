@@ -62,6 +62,7 @@ export default function Map() {
   const urlSelectionRef = useRef<UrlSelection | undefined>(
     typeof window !== "undefined" ? readUrlState().selection : undefined
   );
+  const wellsDataRef = useRef<Well[]>([]);
 
   const { syncLayers, syncViewport, syncSelection, syncMonth } = useUrlSync();
   const syncViewportRef = useRef(syncViewport);
@@ -220,28 +221,94 @@ export default function Map() {
     }
   }, [layers.plays, mapReady]);
 
-  // Wells layer (2D circles + optional 3D ColumnLayer)
+  // Wells layer — all rendering via deck.gl overlay (GPU buffers, no MapLibre GeoJSON source)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
 
     if (layers.wells) {
-      // Manifest-driven loader: add new states here + in scripts/wells/registry.py
-      const REAL_STATE_FILES: Record<string, string> = {
-        TX: "/data/wells-tx.json",
-        ND: "/data/wells-nd.json",
-        CO: "/data/wells-co.json",
-        KS: "/data/wells-ks.json",
-        WY: "/data/wells-wy.json",
-        NM: "/data/wells-nm.json",
-        CA: "/data/wells-ca.json",
+      const renderWells = async (wells: Well[]) => {
+        if (!overlayRef.current) return;
+
+        if (layers.wells3d) {
+          const { ColumnLayer } = await import("@deck.gl/layers");
+          overlayRef.current.setProps({
+            layers: [
+              new ColumnLayer({
+                id: "wells-3d",
+                data: wells,
+                getPosition: (d: Well) => [d.lon, d.lat],
+                getElevation: (d: Well) => d.depth_ft / 10,
+                getFillColor: (d: Well) => depthToColor(d.depth_ft),
+                radius: 800,
+                diskResolution: 6,
+                elevationScale: 1,
+                pickable: true,
+              }),
+            ],
+          });
+          if (!pitchAutoSetRef.current) {
+            prevPitchRef.current = map.getPitch();
+            pitchAutoSetRef.current = true;
+            map.easeTo({ pitch: 45 });
+          }
+        } else {
+          const { ScatterplotLayer } = await import("@deck.gl/layers");
+          overlayRef.current.setProps({
+            layers: [
+              new ScatterplotLayer({
+                id: "wells-2d",
+                data: wells,
+                getPosition: (d: Well) => [d.lon, d.lat],
+                getFillColor: (d: Well) => depthToColor(d.depth_ft),
+                radiusUnits: "pixels",
+                getRadius: 3,
+                opacity: 0.75,
+                pickable: true,
+                stroked: true,
+                lineWidthUnits: "pixels",
+                getLineWidth: (d: Well) => (d.source === "boem" ? 1.5 : 0.5),
+                getLineColor: (d: Well) =>
+                  (d.source === "boem" ? [6, 182, 212, 200] : [30, 58, 95, 150]) as Color4,
+                onClick: (info) => {
+                  const well = info.object as Well | null;
+                  if (well) {
+                    setSelectedWell(well);
+                    syncSelectionRef.current({ type: "well", id: well.id });
+                  }
+                },
+                onHover: (info) => {
+                  map.getCanvas().style.cursor = info.object ? "pointer" : "";
+                },
+              }),
+            ],
+          });
+          if (pitchAutoSetRef.current) {
+            pitchAutoSetRef.current = false;
+            map.easeTo({ pitch: prevPitchRef.current });
+          }
+        }
       };
-      const stateKeys = Object.keys(REAL_STATE_FILES);
-      Promise.all([
-        loadJSON<Well[]>("/data/wells.json"),
-        loadJSON<Well[]>("/data/wells-offshore.json").catch(() => [] as Well[]),
-        ...stateKeys.map((s) => loadJSON<Well[]>(REAL_STATE_FILES[s]).catch(() => [] as Well[])),
-      ]).then(async (results) => {
+
+      const loadAndRender = async () => {
+        if (wellsDataRef.current.length === 0) {
+          // Manifest-driven loader: add new states here + in scripts/wells/registry.py
+          const REAL_STATE_FILES: Record<string, string> = {
+            TX: "/data/wells-tx.json",
+            ND: "/data/wells-nd.json",
+            CO: "/data/wells-co.json",
+            KS: "/data/wells-ks.json",
+            WY: "/data/wells-wy.json",
+            NM: "/data/wells-nm.json",
+            CA: "/data/wells-ca.json",
+          };
+          const stateKeys = Object.keys(REAL_STATE_FILES);
+          const results = await Promise.all([
+            loadJSON<Well[]>("/data/wells.json"),
+            loadJSON<Well[]>("/data/wells-offshore.json").catch(() => [] as Well[]),
+            ...stateKeys.map((s) => loadJSON<Well[]>(REAL_STATE_FILES[s]).catch(() => [] as Well[])),
+          ]);
+
           const syntheticWells = results[0] as Well[];
           const offshoreWells = results[1] as Well[];
           const stateResults = results.slice(2) as Well[][];
@@ -251,103 +318,24 @@ export default function Map() {
           const hasRealOffshore = offshoreWells.length > 0;
           setHasOffshore(hasRealOffshore);
 
-          // Drop synthetic wells for any state where real data loaded successfully
           const coveredStates = new Set(stateKeys.filter((s) => realByState[s].length > 0));
-          let onshoreWells = syntheticWells.filter((w) => !coveredStates.has(w.state));
+          const onshoreWells = syntheticWells.filter((w) => !coveredStates.has(w.state));
           const realWells = stateKeys.flatMap((s) => realByState[s]);
-
           const wells = [...onshoreWells, ...realWells, ...offshoreWells];
-          const geojson: GeoJSON.FeatureCollection = {
-            type: "FeatureCollection",
-            features: wells.map((w) => ({
-              type: "Feature",
-              geometry: { type: "Point", coordinates: [w.lon, w.lat] },
-              properties: w,
-            })),
-          };
+          wellsDataRef.current = wells;
 
-          // Always set up source + circles on first load
-          if (!map.getSource("wells")) {
-            map.addSource("wells", { type: "geojson", data: geojson });
-            map.addLayer({
-              id: "wells-circles",
-              type: "circle",
-              source: "wells",
-              paint: {
-                "circle-radius": 3,
-                "circle-color": [
-                  "interpolate", ["linear"], ["get", "depth_ft"],
-                  0, "#93c5fd",
-                  5000, "#3b82f6",
-                  10000, "#1d4ed8",
-                  20000, "#0f172a",
-                ],
-                "circle-opacity": 0.75,
-                "circle-stroke-width": ["match", ["get", "source"], "boem", 1.5, 0.5],
-                "circle-stroke-color": ["match", ["get", "source"], "boem", "#06b6d4", "#1e3a5f"],
-              },
-            });
-
-            map.on("click", "wells-circles", (e) => {
-              const props = e.features?.[0]?.properties as Well;
-              if (props) {
-                setSelectedWell(props);
-                syncSelectionRef.current({ type: "well", id: props.id });
-              }
-            });
-            map.on("mouseenter", "wells-circles", () => { map.getCanvas().style.cursor = "pointer"; });
-            map.on("mouseleave", "wells-circles", () => { map.getCanvas().style.cursor = ""; });
-
-            if (urlSelectionRef.current?.type === "well") {
-              const well = wells.find((w) => w.id === urlSelectionRef.current!.id);
-              if (well) setSelectedWell(well);
-              urlSelectionRef.current = undefined;
-            }
+          if (urlSelectionRef.current?.type === "well") {
+            const well = wells.find((w) => w.id === urlSelectionRef.current!.id);
+            if (well) setSelectedWell(well);
+            urlSelectionRef.current = undefined;
           }
+        }
 
-          if (layers.wells3d && overlayRef.current) {
-            // 3D mode: hide circles, show deck.gl columns
-            map.setLayoutProperty("wells-circles", "visibility", "none");
+        await renderWells(wellsDataRef.current);
+      };
 
-            const { ColumnLayer } = await import("@deck.gl/layers");
-            overlayRef.current.setProps({
-              layers: [
-                new ColumnLayer({
-                  id: "wells-3d",
-                  data: wells,
-                  getPosition: (d: Well) => [d.lon, d.lat],
-                  getElevation: (d: Well) => d.depth_ft / 10,
-                  getFillColor: (d: Well) => depthToColor(d.depth_ft),
-                  radius: 800,
-                  diskResolution: 6,
-                  elevationScale: 1,
-                  pickable: true,
-                }),
-              ],
-            });
-
-            if (!pitchAutoSetRef.current) {
-              prevPitchRef.current = map.getPitch();
-              pitchAutoSetRef.current = true;
-              map.easeTo({ pitch: 45 });
-            }
-          } else {
-            // 2D mode: hide columns, show circles
-            overlayRef.current?.setProps({ layers: [] });
-            if (map.getLayer("wells-circles")) {
-              map.setLayoutProperty("wells-circles", "visibility", "visible");
-            }
-            if (pitchAutoSetRef.current) {
-              pitchAutoSetRef.current = false;
-              map.easeTo({ pitch: prevPitchRef.current });
-            }
-          }
-        })
-        .catch((err) => reportLoadError("wells", err));
+      loadAndRender().catch((err) => reportLoadError("wells", err));
     } else {
-      if (map.getLayer("wells-circles")) {
-        map.setLayoutProperty("wells-circles", "visibility", "none");
-      }
       overlayRef.current?.setProps({ layers: [] });
       if (pitchAutoSetRef.current) {
         pitchAutoSetRef.current = false;
