@@ -2,9 +2,7 @@
 
 An interactive map of US oil and gas activity built with Next.js, MapLibre GL, and deck.gl — all public data, no API keys required.
 
-**Live demo:** [oil-map.vercel.app](https://oil-map.vercel.app) *(coming soon)*
-
-![Map screenshot showing shale plays, production bubbles, and probability overlay](public/screenshot.png)
+**Live demo:** [oil-map.vercel.app](https://oil-map.vercel.app)
 
 ## Layers
 
