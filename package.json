@@ -8,6 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "generate:offshore": "python3 scripts/generate-offshore.py --region GOM",
+    "generate:production": "python3 scripts/generate-production.py",
+    "generate:wells": "python3 scripts/generate-wells.py",
+    "generate:wells-nd": "python3 scripts/fetch-wells-nd.py",
+    "generate:wells-co": "python3 scripts/fetch-wells-co.py",
     "scrape:rrc": "npx tsx scripts/scrape-rrc.ts"
   },
   "dependencies": {

@@ -11,11 +11,13 @@ const SOURCE_LABELS: Record<string, string> = {
   synthetic: "Synthetic",
   rrc: "TX RRC",
   boem: "BOEM OCS",
+  "nd-ogic": "ND OGIC",
+  "co-ecmc": "CO ECMC",
 };
 
 export default function WellPopup({ well, onClose }: Props) {
   return (
-    <div className="absolute bottom-8 left-4 z-10 bg-gray-900/95 border border-gray-700 rounded-lg p-4 min-w-[220px]">
+    <div className="absolute top-20 left-4 z-10 bg-gray-900/95 border border-gray-700 rounded-lg p-4 min-w-[220px]">
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2">
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Well</p>
@@ -31,6 +33,9 @@ export default function WellPopup({ well, onClose }: Props) {
         <Row label="Depth" value={`${well.depth_ft.toLocaleString()} ft`} highlight />
         {well.water_depth_ft !== undefined && (
           <Row label="Water Depth" value={`${well.water_depth_ft.toLocaleString()} ft`} />
+        )}
+        {well.well_type && (
+          <Row label="Type" value={well.well_type.replace("-", "/")} />
         )}
         <Row label="Operator" value={well.operator} />
         <Row label="County" value={`${well.county}, ${well.state}`} />

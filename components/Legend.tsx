@@ -4,14 +4,29 @@ import { LayerState } from "@/lib/types";
 
 interface Props {
   layers: LayerState;
+  selectedMonth?: string;
+  hasOffshore?: boolean;
 }
 
-export default function Legend({ layers }: Props) {
-  const visible = layers.probability || layers.production || layers.wells;
+export default function Legend({ layers, selectedMonth, hasOffshore }: Props) {
+  const visible = layers.plays || layers.probability || layers.production || layers.wells;
   if (!visible) return null;
 
+  const monthLabel = selectedMonth
+    ? new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    : null;
+
   return (
-    <div className="absolute bottom-8 right-4 z-10 bg-gray-900/90 border border-gray-700 rounded-lg p-3 space-y-3 min-w-[160px]">
+    <div className="absolute bottom-8 right-4 z-10 bg-gray-900/90 border border-gray-700 rounded-lg p-3 space-y-3 min-w-[160px] max-w-[200px]">
+      {layers.plays && (
+        <div>
+          <p className="text-xs text-gray-400 mb-1.5">Shale Plays</p>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-4 h-3 rounded-sm border border-amber-500/80 bg-amber-500/25" />
+            <span className="text-xs text-gray-500">Play polygon</span>
+          </div>
+        </div>
+      )}
       {layers.probability && (
         <div>
           <p className="text-xs text-gray-400 mb-1.5">Oil Probability</p>
@@ -32,6 +47,15 @@ export default function Legend({ layers }: Props) {
           <div className="flex justify-between text-xs text-gray-500 mt-0.5">
             <span>Shallow</span><span>Deep</span>
           </div>
+          {hasOffshore && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className="inline-block w-3 h-3 rounded-full border border-cyan-400 bg-transparent" />
+              <span className="text-xs text-gray-500">Offshore (BOEM)</span>
+            </div>
+          )}
+          {layers.wells3d && (
+            <p className="text-xs text-gray-600 mt-1">3D columns enabled</p>
+          )}
         </div>
       )}
       {layers.production && (
@@ -45,7 +69,10 @@ export default function Legend({ layers }: Props) {
             <span className="inline-block rounded-full bg-red-500 opacity-75" style={{ width: 22, height: 22 }} />
             <span className="text-xs text-gray-500">Major basin</span>
           </div>
-          <p className="text-xs text-gray-600 mt-1.5">Click bubble for details</p>
+          {monthLabel && (
+            <p className="text-xs text-gray-600 mt-1.5">{monthLabel}</p>
+          )}
+          <p className="text-xs text-gray-600 mt-0.5">Click bubble for details</p>
         </div>
       )}
     </div>

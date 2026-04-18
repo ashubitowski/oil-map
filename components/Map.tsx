@@ -9,6 +9,7 @@ import WellPopup from "./WellPopup";
 import ProductionPopup from "./ProductionPopup";
 import TimelineSlider from "./TimelineSlider";
 import Legend from "./Legend";
+import LoadBanner from "./LoadBanner";
 
 declare global {
   interface Window {
@@ -69,6 +70,14 @@ export default function Map() {
   syncSelectionRef.current = syncSelection;
 
 
+  const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
+  const [hasOffshore, setHasOffshore] = useState(false);
+
+  const reportLoadError = useCallback((layer: string, err: unknown) => {
+    const msg = err instanceof Error ? err.message : "failed to load";
+    setLoadErrors((prev) => ({ ...prev, [layer]: msg }));
+  }, []);
+
   const [layers, setLayers] = useState<LayerState>(() => {
     const url = typeof window !== "undefined" ? readUrlState().layers : {};
     return {
@@ -111,6 +120,10 @@ export default function Map() {
         mapRef.current = map;
         // Store maplibre ref so we can use Popup elsewhere
         (map as unknown as { _ml: typeof maplibre })._ml = maplibre;
+
+        // Navigation + scale controls
+        map.addControl(new maplibre.NavigationControl(), "top-left");
+        map.addControl(new maplibre.ScaleControl({ unit: "imperial" }), "bottom-left");
 
         // Create deck.gl overlay for 3D layers
         try {
@@ -198,9 +211,7 @@ export default function Map() {
             map.setLayoutProperty("plays-outline", "visibility", "visible");
           }
         })
-        .catch(() => {
-          // Data not yet downloaded — layer stays off
-        });
+        .catch((err) => reportLoadError("plays", err));
     } else {
       if (map.getLayer("plays-fill")) {
         map.setLayoutProperty("plays-fill", "visibility", "none");
@@ -219,12 +230,21 @@ export default function Map() {
         loadJSON<Well[]>("/data/wells.json"),
         loadJSON<Well[]>("/data/wells-offshore.json").catch(() => [] as Well[]),
         loadJSON<Well[]>("/data/wells-tx.json").catch(() => [] as Well[]),
-      ]).then(async ([syntheticWells, offshoreWells, txWells]) => {
-          // If real TX wells exist, drop synthetic TX wells to avoid duplication
-          const onshoreWells = txWells.length > 0
-            ? syntheticWells.filter((w) => w.state !== "TX")
-            : syntheticWells;
-          const wells = [...onshoreWells, ...txWells, ...offshoreWells];
+        loadJSON<Well[]>("/data/wells-nd.json").catch(() => [] as Well[]),
+        loadJSON<Well[]>("/data/wells-co.json").catch(() => [] as Well[]),
+      ]).then(async ([syntheticWells, offshoreWells, txWells, ndWells, coWells]) => {
+          const hasRealTx = txWells.length > 0;
+          const hasRealNd = ndWells.length > 0;
+          const hasRealCo = coWells.length > 0;
+          const hasRealOffshore = offshoreWells.length > 0;
+          setHasOffshore(hasRealOffshore);
+
+          let onshoreWells = syntheticWells;
+          if (hasRealTx) onshoreWells = onshoreWells.filter((w) => w.state !== "TX");
+          if (hasRealNd) onshoreWells = onshoreWells.filter((w) => w.state !== "ND");
+          if (hasRealCo) onshoreWells = onshoreWells.filter((w) => w.state !== "CO");
+
+          const wells = [...onshoreWells, ...txWells, ...ndWells, ...coWells, ...offshoreWells];
           const geojson: GeoJSON.FeatureCollection = {
             type: "FeatureCollection",
             features: wells.map((w) => ({
@@ -311,7 +331,7 @@ export default function Map() {
             }
           }
         })
-        .catch(() => {});
+        .catch((err) => reportLoadError("wells", err));
     } else {
       if (map.getLayer("wells-circles")) {
         map.setLayoutProperty("wells-circles", "visibility", "none");
@@ -390,7 +410,7 @@ export default function Map() {
             map.setLayoutProperty("probability-fill", "visibility", "visible");
           }
         })
-        .catch(() => {});
+        .catch((err) => reportLoadError("probability", err));
     } else {
       if (map.getLayer("probability-fill")) {
         map.setLayoutProperty("probability-fill", "visibility", "none");
@@ -511,7 +531,7 @@ export default function Map() {
             map.setLayoutProperty("production-labels", "visibility", "visible");
           }
         })
-        .catch(() => {});
+        .catch((err) => reportLoadError("production", err));
     } else {
       if (map.getLayer("production-circles")) {
         map.setLayoutProperty("production-circles", "visibility", "none");
@@ -569,7 +589,8 @@ export default function Map() {
       {mapReady && (
         <>
           <LayerToggle layers={layers} onToggle={toggleLayer} />
-          <Legend layers={layers} />
+          <Legend layers={layers} selectedMonth={selectedMonth || undefined} hasOffshore={hasOffshore} />
+          <LoadBanner errors={loadErrors} />
           {selectedWell && (
             <WellPopup
               well={selectedWell}

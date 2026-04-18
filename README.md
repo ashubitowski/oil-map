@@ -9,9 +9,9 @@ An interactive map of US oil and gas activity built with Next.js, MapLibre GL, a
 | Layer | Data Source | Description |
 |---|---|---|
 | Shale Plays | [EIA](https://www.eia.gov/maps/maps.htm) | 50 major shale play polygons with hover labels |
-| Wells + Depth | Synthetic (polygon-constrained) + [BOEM OCS](https://www.bsee.gov/tools-center/bsee-data-center) | ~1,800 onshore wells and Gulf of Mexico offshore wells colored by depth |
+| Wells + Depth | Synthetic + [ND OGIC](https://www.dmr.nd.gov/oilgas/) + [CO ECMC](https://ecmc.state.co.us) + [TX RRC](https://www.rrc.texas.gov) + [BOEM OCS](https://www.data.boem.gov/Main/Borehole.aspx) | Onshore wells by state (real where available) + Gulf of Mexico offshore wells colored by depth |
 | Oil Probability | [USGS NOGA](https://www.usgs.gov/programs/energy-resources-program/science/national-oil-and-gas-assessment) | 32 assessment unit polygons colored by probability of recoverable oil |
-| Production | [EIA Drilling Productivity Report](https://www.eia.gov/petroleum/drilling/) | Sized bubbles at 7 major basin centroids, 36-month timeline slider |
+| Production | [EIA v2 API](https://api.eia.gov/v2/petroleum/crd/drill/data/) | Sized bubbles at 7 major basin centroids, 36-month timeline slider |
 
 ## Features
 
@@ -53,13 +53,19 @@ python3 scripts/fetch-data.ts
 python3 scripts/convert-usgs-au.py
 
 # Synthetic onshore wells (polygon-constrained with realistic depth profiles)
-python3 scripts/generate-wells.py
+npm run generate:wells
 
-# EIA production data (requires data/raw/dpr-data.xlsx from EIA DPR page)
-python3 scripts/generate-production.py
+# EIA production data — requires a free EIA API key (https://www.eia.gov/opendata/)
+EIA_API_KEY=your_key npm run generate:production
 
-# BOEM Gulf of Mexico offshore wells
+# BOEM Gulf of Mexico offshore wells (downloads ~50 MB ZIP from data.boem.gov)
 npm run generate:offshore
+
+# Real North Dakota wells (ND OGIC bulk download)
+npm run generate:wells-nd
+
+# Real Colorado wells (CO ECMC bulk download)
+npm run generate:wells-co
 
 # Real Texas wells via RRC portal (Playwright — opens browser on first run)
 npm run scrape:rrc

@@ -37,7 +37,7 @@ export default function TimelineSlider({ months, selectedMonth, onChange }: Prop
     : "";
 
   return (
-    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 bg-gray-900/95 border border-gray-700 rounded-lg px-4 py-3 flex items-center gap-3 min-w-[320px]">
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-gray-900/95 border border-gray-700 rounded-lg px-4 py-3 flex items-center gap-3 min-w-[320px]">
       <button
         onClick={() => {
           if (currentIndex >= months.length - 1) onChange(months[0]);
@@ -57,6 +57,7 @@ export default function TimelineSlider({ months, selectedMonth, onChange }: Prop
           setPlaying(false);
           onChange(months[Number(e.target.value)]);
         }}
+        aria-label="Timeline month"
         className="flex-1 accent-red-500"
       />
       <span className="text-xs text-gray-300 w-20 text-right tabular-nums">{label}</span>

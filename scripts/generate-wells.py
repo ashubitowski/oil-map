@@ -149,6 +149,12 @@ def wells_for_play(feature, count: int) -> list:
         operator = random.choice(profile["operators"])
         state = get_state(lat, lon)
         county = get_county_approx(lat, lon)
+        raw_type = random.choice(WELL_TYPES)
+        well_type = (
+            "oil" if raw_type == "Oil Well"
+            else "gas" if raw_type == "Gas Well"
+            else "oil-gas"
+        )
         wells.append({
             "id": f"{play_name[:6].upper()}-{abs(hash((lon, lat))) % 100000:05d}",
             "lat": round(lat, 5),
@@ -161,6 +167,8 @@ def wells_for_play(feature, count: int) -> list:
             "state": state,
             "play": play_name,
             "basin": basin,
+            "source": "synthetic",
+            "well_type": well_type,
         })
     return wells
 

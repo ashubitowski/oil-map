@@ -9,7 +9,8 @@ export interface Well {
   county: string;
   state: string;
   water_depth_ft?: number;
-  source?: "synthetic" | "rrc" | "boem";
+  source?: "synthetic" | "rrc" | "boem" | "nd-ogic" | "co-ecmc";
+  well_type?: "oil" | "gas" | "oil-gas" | "injection" | "disposal" | "other";
 }
 
 export interface Play {

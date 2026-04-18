@@ -22,6 +22,8 @@ export default function LayerToggle({ layers, onToggle }: Props) {
         <div key={id}>
           <button
             onClick={() => onToggle(id)}
+            aria-label={`${layers[id] ? "Hide" : "Show"} ${label} layer`}
+            aria-pressed={layers[id]}
             className={`flex items-center gap-2 w-full text-sm text-left transition-opacity ${
               layers[id] ? "opacity-100" : "opacity-40"
             }`}
@@ -32,6 +34,8 @@ export default function LayerToggle({ layers, onToggle }: Props) {
           {id === "wells" && layers.wells && (
             <button
               onClick={() => onToggle("wells3d")}
+              aria-label={`${layers.wells3d ? "Disable" : "Enable"} 3D depth columns`}
+              aria-pressed={layers.wells3d}
               className={`flex items-center gap-2 w-full text-xs text-left mt-1 pl-5 transition-opacity ${
                 layers.wells3d ? "opacity-100" : "opacity-40"
               }`}

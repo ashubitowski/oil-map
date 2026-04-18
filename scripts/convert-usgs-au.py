@@ -1,4 +1,5 @@
 """
+Canonical producer for public/data/assessment.geojson.
 Converts USGS Shale Gas Assessment Unit shapefiles to a merged GeoJSON.
 Assigns probability values based on AU name and USGS published resource estimates.
 
