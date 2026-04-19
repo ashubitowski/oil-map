@@ -50,6 +50,8 @@ public/data/*.geojson
 public/data/wells-??.json
 public/data/wells.json
 public/data/wells-offshore.json
+public/data/wells-manifest.json
+public/data/wells-*.meta.json
 
 # playwright session state
 scripts/.rrc-state.json
