@@ -43,8 +43,13 @@ next-env.d.ts
 # raw source data (large binary files — run scripts/ to regenerate)
 /data/raw/
 
-# per-state well JSON files (large, redundant — .bin is what the frontend uses)
+# data files served from Cloudflare R2 — not deployed via Vercel
+public/data/*.bin
+public/data/*.bin.gz
+public/data/*.geojson
 public/data/wells-??.json
+public/data/wells.json
+public/data/wells-offshore.json
 
 # playwright session state
 scripts/.rrc-state.json
