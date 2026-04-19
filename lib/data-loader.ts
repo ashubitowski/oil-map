@@ -6,8 +6,10 @@ const cache: Record<string, unknown> = {};
 // "https://data.example.com/data"), all /data/* fetches are redirected there.
 // Leave it unset for local dev — requests fall through to public/data/*.
 const DATA_BASE = process.env.NEXT_PUBLIC_DATA_BASE_URL ?? "";
+const VERCEL_ONLY = ["/data/production-history.json", "/data/production-basins.json"];
 function resolveDataPath(p: string): string {
-  return DATA_BASE ? p.replace(/^\/data/, DATA_BASE) : p;
+  if (!DATA_BASE || VERCEL_ONLY.includes(p)) return p;
+  return p.replace(/^\/data/, DATA_BASE);
 }
 
 export async function loadGeoJSON(path: string) {
