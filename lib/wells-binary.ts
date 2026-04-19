@@ -175,7 +175,7 @@ export function mergeBinaryColumns(cols: WellColumns[]): WellColumns {
   const total = cols.reduce((s, c) => s + c.count, 0);
 
   const fields = ["operator", "county", "status", "well_type", "source", "spud_date"] as const;
-  const mergedDicts: Record<string, string[]> = {};
+  const mergedDicts = {} as WellDicts;
   const remaps: Record<string, number[][]> = {};
 
   for (const field of fields) {
@@ -233,6 +233,6 @@ export function mergeBinaryColumns(cols: WellColumns[]): WellColumns {
     lons, lats, depths,
     operatorIdxs, countyIdxs, statusIdxs, wellTypeIdxs, sourceIdxs, spudDateIdxs,
     ids,
-    dicts: mergedDicts as WellColumns["dicts"],
+    dicts: mergedDicts,
   };
 }
