@@ -21,7 +21,7 @@ interface Props {
 
 export default function LayerToggle({ layers, onToggle, enabledStatuses, statusCounts, onStatusToggle, onStatusReset }: Props) {
   return (
-    <div className="absolute top-4 right-4 z-10 bg-gray-900/90 border border-gray-700 rounded-lg p-3 space-y-2 min-w-[180px]">
+    <div className="absolute top-4 right-4 z-10 bg-gray-900/90 border border-gray-700 rounded-lg p-3 space-y-2 w-[200px]">
       <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-3">Layers</p>
       {LAYERS.map(({ id, label, color }) => (
         <div key={id}>
