@@ -27,10 +27,10 @@ export default function LayerToggle({ layers, onToggle, enabledStatuses, statusC
     return (
       <button
         onClick={() => setOpen(true)}
-        className="absolute top-4 right-0 z-10 bg-gray-900/90 border border-r-0 border-gray-700 rounded-l-lg px-1.5 py-2 text-gray-400 hover:text-gray-200 transition-colors"
+        className="absolute top-4 right-0 z-10 bg-gray-900/90 border border-r-0 border-gray-700 rounded-l-lg px-2.5 py-3 text-gray-400 hover:text-gray-200 transition-colors"
         aria-label="Show layers panel"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
         </svg>
       </button>
