@@ -1,0 +1,6 @@
+# Large data files are served from Cloudflare R2 (see scripts/upload-data.sh).
+# Keep them out of Vercel deploys to reduce build size and avoid bandwidth overages.
+public/data/*.bin
+public/data/*.bin.gz
+public/data/wells-*.json
+public/data/*.geojson

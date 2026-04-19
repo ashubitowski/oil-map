@@ -2,9 +2,17 @@ import type { WellColumns, WellDicts } from "./wells-binary";
 
 const cache: Record<string, unknown> = {};
 
+// When NEXT_PUBLIC_DATA_BASE_URL is set (e.g., an R2 bucket URL like
+// "https://data.example.com/data"), all /data/* fetches are redirected there.
+// Leave it unset for local dev — requests fall through to public/data/*.
+const DATA_BASE = process.env.NEXT_PUBLIC_DATA_BASE_URL ?? "";
+function resolveDataPath(p: string): string {
+  return DATA_BASE ? p.replace(/^\/data/, DATA_BASE) : p;
+}
+
 export async function loadGeoJSON(path: string) {
   if (cache[path]) return cache[path];
-  const res = await fetch(path);
+  const res = await fetch(resolveDataPath(path));
   if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
   const data = await res.json();
   cache[path] = data;
@@ -13,7 +21,7 @@ export async function loadGeoJSON(path: string) {
 
 export async function loadJSON<T>(path: string): Promise<T> {
   if (cache[path]) return cache[path] as T;
-  const res = await fetch(path);
+  const res = await fetch(resolveDataPath(path));
   if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
   const data = await res.json();
   cache[path] = data;
@@ -22,14 +30,14 @@ export async function loadJSON<T>(path: string): Promise<T> {
 
 /** Fetch a bin file, trying `.gz` first (decompressed on caller's side). */
 export async function loadBin(path: string): Promise<ArrayBuffer> {
-  const gzRes = await fetch(path + ".gz");
+  const gzRes = await fetch(resolveDataPath(path) + ".gz");
   if (gzRes.ok) {
     const compressed = await gzRes.arrayBuffer();
     return new Response(
       new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"))
     ).arrayBuffer();
   }
-  const res = await fetch(path);
+  const res = await fetch(resolveDataPath(path));
   if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
   return res.arrayBuffer();
 }
@@ -56,12 +64,13 @@ export async function loadWellsState(
   // Try compressed first; fall back to plain .bin
   let buffer: ArrayBuffer;
   let compressed = false;
-  const gzRes = await fetch(url + ".gz");
+  const resolvedUrl = resolveDataPath(url);
+  const gzRes = await fetch(resolvedUrl + ".gz");
   if (gzRes.ok) {
     buffer = await gzRes.arrayBuffer();
     compressed = true;
   } else {
-    const res = await fetch(url);
+    const res = await fetch(resolvedUrl);
     if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
     buffer = await res.arrayBuffer();
   }
