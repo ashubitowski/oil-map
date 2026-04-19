@@ -13,6 +13,7 @@ from scripts.wells.states.ks import adapter as ks_adapter
 from scripts.wells.states.wy import adapter as wy_adapter
 from scripts.wells.states.nm import adapter as nm_adapter
 from scripts.wells.states.ca import adapter as ca_adapter
+from scripts.wells.states.tx import adapter as tx_adapter
 
 REGISTRY: dict = {
     "ND": nd_adapter,
@@ -22,4 +23,5 @@ REGISTRY: dict = {
     "WY": wy_adapter,
     "NM": nm_adapter,
     "CA": ca_adapter,
+    "TX": tx_adapter,
 }

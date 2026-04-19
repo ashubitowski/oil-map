@@ -1,37 +1,54 @@
 """
-Colorado — CO ECMC Well Spots (location + operator) joined with completion
-table (depth + spud date).
+Colorado — CO ECMC Well Spots (shapefile)
 
-Source: CO Energy and Carbon Management Commission
-  Well Spots ZIP: https://ecmc.state.co.us/documents/data/downloads/gis/WELLS.ZIP
-  Completions CSV: https://ecmc.state.co.us/documents/data/downloads/gis/WELLLOGS.ZIP
-    (alternate: https://ecmc.state.co.us/cogcc/facility_production.html)
+Source: Colorado Energy and Carbon Management Commission
+  https://ecmc.state.co.us/documents/data/downloads/gis/WELLS_SHP.ZIP
+  Updated daily. Contains lat/lon (WGS84), depth (Max_MD), spud date,
+  operator, status, and well class in one file — no separate join needed.
 
-The Well Spots file has lat/lon, operator, county, status, and well type but
-NO depth or spud date. The completion table adds those, keyed on API number.
-Wells with no matching completion record are dropped (depth unknown = useless dot).
+Requires: pip install pyshp
 """
 
-import csv
 import io
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, Iterator, Optional, Tuple
+from typing import Iterator, Optional
 
 try:
     import requests
 except ImportError:
     sys.exit("requests not installed. Run: pip install requests")
 
-from scripts.wells.adapters.direct_download import DirectDownloadAdapter
-from scripts.wells.adapters.base import BaseConfig
-from scripts.wells.schema import col, parse_spud_date, normalize_api, is_in_bounds
+try:
+    import shapefile
+except ImportError:
+    sys.exit("pyshp not installed. Run: pip install pyshp")
 
-# Well Spots: lat/lon + metadata
-WELLS_URL = "https://ecmc.state.co.us/documents/data/downloads/gis/WELLS.ZIP"
-# Well Logs/Completions: API → total depth + spud date
-LOGS_URL = "https://ecmc.state.co.us/documents/data/downloads/gis/WELLLOGS.ZIP"
+from scripts.wells.adapters.base import Adapter, BaseConfig
+from scripts.wells.schema import normalize_api, parse_spud_date, is_in_bounds
+
+WELLS_URL = "https://ecmc.state.co.us/documents/data/downloads/gis/WELLS_SHP.ZIP"
+
+# Colorado FIPS county code (3-digit) → county name
+_CO_COUNTIES: dict[str, str] = {
+    "001": "Adams", "003": "Alamosa", "005": "Arapahoe", "007": "Archuleta",
+    "009": "Baca", "011": "Bent", "013": "Boulder", "014": "Broomfield",
+    "015": "Chaffee", "017": "Cheyenne", "019": "Clear Creek", "021": "Conejos",
+    "023": "Costilla", "025": "Crowley", "027": "Custer", "029": "Delta",
+    "031": "Denver", "033": "Dolores", "035": "Douglas", "037": "Eagle",
+    "039": "Elbert", "041": "El Paso", "043": "Fremont", "045": "Garfield",
+    "047": "Gilpin", "049": "Grand", "051": "Gunnison", "053": "Hinsdale",
+    "055": "Huerfano", "057": "Jackson", "059": "Jefferson", "061": "Kiowa",
+    "063": "Kit Carson", "065": "Lake", "067": "La Plata", "069": "Larimer",
+    "071": "Las Animas", "073": "Lincoln", "075": "Logan", "077": "Mesa",
+    "079": "Mineral", "081": "Moffat", "083": "Montezuma", "085": "Montrose",
+    "087": "Morgan", "089": "Otero", "091": "Ouray", "093": "Park",
+    "095": "Phillips", "097": "Pitkin", "099": "Prowers", "101": "Pueblo",
+    "103": "Rio Blanco", "105": "Rio Grande", "107": "Routt", "109": "Saguache",
+    "111": "San Juan", "113": "San Miguel", "115": "Sedgwick", "117": "Summit",
+    "119": "Teller", "121": "Washington", "123": "Weld", "125": "Yuma",
+}
 
 _config = BaseConfig(
     state="CO",
@@ -41,123 +58,115 @@ _config = BaseConfig(
     output=Path("public/data/wells-co.json"),
     raw_dir=Path("data/raw/co"),
     status_map={
-        "AB": "Active", "AC": "Active", "PA": "Plugged & Abandoned",
-        "SI": "Inactive", "TA": "Temporarily Abandoned", "WO": "Inactive", "PR": "Permitted",
+        "PA": "Plugged & Abandoned",
+        "PR": "Active",
+        "AL": "Active",
+        "AC": "Active",
+        "EP": "Active",
+        "SI": "Inactive",
+        "WO": "Inactive",
+        "TA": "Temporarily Abandoned",
+        "AP": "Permitted",
+        "IJ": "Active",
     },
     well_type_map={
-        "OW": "oil", "GW": "gas", "GX": "gas", "OX": "oil",
-        "OGW": "oil-gas", "WI": "injection", "WD": "disposal", "IW": "injection", "CW": "other",
-    },
-    field_map={
-        "lat": ["SURFACE_LATITUDE", "SURF_LAT", "LAT", "LATITUDE", "LATITUDE_WGS84",
-                "LATITUDE_DD", "Y"],
-        "lon": ["SURFACE_LONGITUDE", "SURF_LON", "LON", "LONGITUDE", "LONGITUDE_WGS84",
-                "LONGITUDE_DD", "X"],
-        "depth_ft": ["TOTAL_DEPTH", "TD_FT", "TOTAL_MEASURED_DEPTH", "COMPL_DEPTH",
-                     "COMPLETION_DEPTH", "MEASURED_DEPTH_FT", "DEPTH", "MD"],
-        "api": ["API_NUMBER", "API_NO", "API", "WELL_ID", "WELLID"],
-        "operator": ["OPERATOR_NAME", "OPERATOR", "CURR_OPERATOR", "COMPANY"],
-        "status": ["WELL_STATUS", "STATUS_CODE", "FACILITYSTATUSTYPEDESCRIPTION", "STAT", "STATUS"],
-        "well_type": ["WELL_TYPE", "TYPE_CODE", "WELLTYPE", "FACILITYTYPE"],
-        "county": ["COUNTY", "COUNTY_NAME", "CNTY"],
-        "spud_date": ["SPUD_DATE", "SPUD"],
+        "OW":  "oil",
+        "GW":  "gas",
+        "CBM": "gas",
+        "OGW": "oil-gas",
+        "ERI": "injection",
+        "IJ":  "injection",
+        "DSP": "disposal",
+        "WD":  "disposal",
+        "STO": "other",
+        "DA":  "other",
+        "LO":  "other",
     },
 )
 
 
-def _download_file(url: str, dest: Path) -> None:
-    if dest.exists():
-        print(f"  Using cached {dest}")
-        return
-    print(f"  Downloading {url} ...")
-    resp = requests.get(url, timeout=180, stream=True)
-    resp.raise_for_status()
-    total = 0
-    with open(dest, "wb") as f:
-        for chunk in resp.iter_content(65536):
-            f.write(chunk)
-            total += len(chunk)
-    print(f"  Saved {total / 1e6:.1f} MB → {dest}")
-
-
-def _extract_csv(zip_path: Path) -> str:
-    with zipfile.ZipFile(zip_path) as zf:
-        names = [n for n in zf.namelist() if n.lower().endswith((".csv", ".txt", ".dat"))]
-        dbfs = [n for n in zf.namelist() if n.lower().endswith(".dbf")]
-        chosen = (names or dbfs)[0] if (names or dbfs) else None
-        if not chosen:
-            raise RuntimeError(f"No data file in {zip_path}. Contents: {zf.namelist()}")
-        with zf.open(chosen) as f:
-            return f.read().decode("utf-8", errors="replace")
-
-
-def _build_depth_index(logs_zip: Path) -> Dict[str, Tuple[float, str]]:
-    """Return {api_10digit: (depth_ft, spud_date)} from the completion/log table."""
-    text = _extract_csv(logs_zip)
-    sample = text[:2000]
-    delimiter = "\t" if "\t" in sample else ("|" if "|" in sample else ",")
-    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
-    index: Dict[str, Tuple[float, str]] = {}
-    for row in reader:
-        api_raw = col(row, "API_NUMBER", "API_NO", "API", "WELLAPINO")
-        depth_s = col(row, "TOTAL_DEPTH", "TD_FT", "COMPL_DEPTH", "MEASURED_DEPTH_FT",
-                      "BASE_INTERVAL_DEPTH", "PERF_BOTTOM", "DEPTH")
-        spud_raw = col(row, "SPUD_DATE", "SPUD", "SPUDDATE")
-        api = normalize_api(api_raw)
-        if not api:
-            continue
-        try:
-            depth = float(depth_s)
-        except (ValueError, TypeError):
-            continue
-        if depth <= 0:
-            continue
-        existing = index.get(api)
-        # Keep the deepest completion for this API
-        if existing is None or depth > existing[0]:
-            index[api] = (depth, parse_spud_date(spud_raw))
-    print(f"  Completion index: {len(index):,} records")
-    return index
-
-
-class COAdapter(DirectDownloadAdapter):
+class COAdapter(Adapter):
     def download(self) -> Path:
         cfg = self.config
         cfg.raw_dir.mkdir(parents=True, exist_ok=True)
-        wells_zip = cfg.raw_dir / "WELLS.ZIP"
-        logs_zip = cfg.raw_dir / "WELLLOGS.ZIP"
-        _download_file(WELLS_URL, wells_zip)
-        _download_file(LOGS_URL, logs_zip)
-        # Store logs path for use in parse()
-        self._logs_zip = logs_zip
-        return wells_zip
+        dest = cfg.raw_dir / "WELLS_SHP.ZIP"
+        if dest.exists():
+            print(f"  Using cached {dest} (delete to re-download)")
+            return dest
+        print(f"  Downloading {WELLS_URL} ...")
+        resp = requests.get(WELLS_URL, timeout=180, stream=True)
+        resp.raise_for_status()
+        total = 0
+        with open(dest, "wb") as f:
+            for chunk in resp.iter_content(65536):
+                f.write(chunk)
+                total += len(chunk)
+        print(f"  Saved {total / 1e6:.1f} MB → {dest}")
+        return dest
 
     def parse(self, raw: Path) -> Iterator[dict]:
-        # Build depth/spud index from completion table
-        self._depth_index = _build_depth_index(self._logs_zip)
-        yield from super().parse(raw)
+        zf = zipfile.ZipFile(raw)
+        r = shapefile.Reader(
+            shp=io.BytesIO(zf.read("Wells.shp")),
+            dbf=io.BytesIO(zf.read("Wells.dbf")),
+        )
+        fields = [f[0] for f in r.fields[1:]]
+        for rec in r.records():
+            yield dict(zip(fields, rec))
 
-    def normalize_row(self, row: dict) -> "Optional[dict]":
-        well = super().normalize_row(row)
-        if well is None:
-            return None
-
+    def normalize_row(self, row: dict) -> Optional[dict]:
         cfg = self.config
-        api = normalize_api(col(row, "API_NUMBER", "API_NO", "API", "WELL_ID", "WELLID"))
 
-        # Try to get depth from completion index; also from shapefile as fallback
-        if api and api in self._depth_index:
-            depth, spud = self._depth_index[api]
-            well["depth_ft"] = int(depth)
-            if spud:
-                well["spud_date"] = spud
-        elif well["depth_ft"] <= 0:
-            # No depth from either source — drop the well
+        try:
+            lat = float(row.get("Latitude") or 0)
+            lon = float(row.get("Longitude") or 0)
+        except (TypeError, ValueError):
+            return None
+        if lat == 0.0 or lon == 0.0:
             return None
 
-        if not is_in_bounds(well["lat"], well["lon"], cfg.bounds):
+        depth_raw = row.get("Max_MD")
+        try:
+            depth = float(depth_raw) if depth_raw is not None else 0.0
+        except (TypeError, ValueError):
+            depth = 0.0
+        if depth <= 0:
             return None
-        return well
+
+        if not is_in_bounds(lat, lon, cfg.bounds):
+            return None
+
+        api_label = str(row.get("API_Label") or "").strip()
+        api = normalize_api(api_label.replace("-", "")) if api_label else None
+
+        county_code = str(row.get("API_County") or "").zfill(3)
+        county = _CO_COUNTIES.get(county_code, "Unknown")
+
+        spud_raw = row.get("Spud_Date")
+        if hasattr(spud_raw, "isoformat"):
+            spud = spud_raw.isoformat()
+        else:
+            spud = parse_spud_date(str(spud_raw) if spud_raw else "")
+
+        status = cfg.resolve_status(str(row.get("Facil_Stat") or ""))
+        well_type = cfg.resolve_well_type(str(row.get("Well_Class") or ""))
+        operator = str(row.get("Operator") or "Unknown").strip() or "Unknown"
+
+        well_id = f"co-{normalize_api(api_label.replace('-', ''))}" if api_label else None
+
+        return {
+            "id": well_id,
+            "lat": round(lat, 6),
+            "lon": round(lon, 6),
+            "depth_ft": int(depth),
+            "operator": operator,
+            "spud_date": spud,
+            "status": status,
+            "county": county,
+            "state": "CO",
+            "source": "co-ecmc",
+            "well_type": well_type,
+        }
 
 
 adapter = COAdapter(_config)

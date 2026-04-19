@@ -34,7 +34,7 @@ export default function WellPopup({ well, onClose }: Props) {
         <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-sm leading-none">✕</button>
       </div>
       <div className="space-y-1.5">
-        <Row label="Depth" value={`${well.depth_ft.toLocaleString()} ft`} highlight />
+        <Row label="Depth" value={well.depth_ft > 0 ? `${well.depth_ft.toLocaleString()} ft` : "—"} highlight />
         {well.water_depth_ft !== undefined && (
           <Row label="Water Depth" value={`${well.water_depth_ft.toLocaleString()} ft`} />
         )}

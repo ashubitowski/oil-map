@@ -16,11 +16,11 @@
     "generate:wells-wy": "python3 -m scripts.wells.fetch WY",
     "generate:wells-nm": "python3 -m scripts.wells.fetch NM",
     "generate:wells-ca": "python3 -m scripts.wells.fetch CA",
+    "generate:wells-tx": "python3 -m scripts.wells.fetch TX",
     "generate:wells-all": "python3 -m scripts.wells.fetch ALL",
     "generate:manifest": "python3 scripts/wells/generate_manifest.py",
     "convert:bins": "python3 scripts/wells/convert_to_bin.py",
-    "fetch:wells": "python3 -m scripts.wells.fetch",
-    "scrape:rrc": "npx tsx scripts/scrape-rrc.ts"
+    "fetch:wells": "python3 -m scripts.wells.fetch"
   },
   "dependencies": {
     "@deck.gl/core": "^9.3.1",
@@ -41,7 +41,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
-    "playwright": "^1.59.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
