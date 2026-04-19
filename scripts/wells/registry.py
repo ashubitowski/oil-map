@@ -16,6 +16,10 @@ from scripts.wells.states.ca import adapter as ca_adapter
 from scripts.wells.states.tx import adapter as tx_adapter
 from scripts.wells.states.ok import adapter as ok_adapter
 from scripts.wells.states.pa import adapter as pa_adapter
+from scripts.wells.states.mt import adapter as mt_adapter
+from scripts.wells.states.ut import adapter as ut_adapter
+from scripts.wells.states.oh import adapter as oh_adapter
+from scripts.wells.states.wv import adapter as wv_adapter
 
 REGISTRY: dict = {
     "ND": nd_adapter,
@@ -28,4 +32,8 @@ REGISTRY: dict = {
     "TX": tx_adapter,
     "OK": ok_adapter,
     "PA": pa_adapter,
+    "MT": mt_adapter,
+    "UT": ut_adapter,
+    "OH": oh_adapter,
+    "WV": wv_adapter,
 }
