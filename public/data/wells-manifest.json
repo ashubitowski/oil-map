@@ -2,7 +2,7 @@
   "version": 1,
   "states": {
     "CA": {
-      "file": "wells-ca.json",
+      "file": "wells-ca.bin",
       "bbox": [
         -124.5,
         32.5,
@@ -12,7 +12,7 @@
       "count": 242237
     },
     "KS": {
-      "file": "wells-ks.json",
+      "file": "wells-ks.bin",
       "bbox": [
         -102.1,
         37.0,
@@ -22,7 +22,7 @@
       "count": 265255
     },
     "ND": {
-      "file": "wells-nd.json",
+      "file": "wells-nd.bin",
       "bbox": [
         -104.1,
         45.9,
@@ -32,7 +32,7 @@
       "count": 35678
     },
     "NM": {
-      "file": "wells-nm.json",
+      "file": "wells-nm.bin",
       "bbox": [
         -109.1,
         31.3,
@@ -42,7 +42,7 @@
       "count": 82070
     },
     "WY": {
-      "file": "wells-wy.json",
+      "file": "wells-wy.bin",
       "bbox": [
         -111.1,
         40.9,

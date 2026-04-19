@@ -11,6 +11,7 @@ from scripts.wells.schema import (
     col, col_map, parse_spud_date, normalize_api,
     is_in_bounds, write_wells, write_meta, print_summary, update_manifest,
 )
+from scripts.wells.binary import write_wells_bin
 
 
 @dataclass
@@ -137,8 +138,10 @@ class Adapter(ABC):
 
         if not dry_run:
             write_wells(wells, cfg.output)
+            bin_path = cfg.output.with_suffix(".bin")
+            write_wells_bin(wells, bin_path)
             write_meta(cfg.state, cfg.source_label, cfg.url, len(wells), cfg.output)
-            update_manifest(cfg.state, cfg.output.name, cfg.bounds, len(wells))
-            print(f"  Wrote → {cfg.output}")
+            update_manifest(cfg.state, bin_path.name, cfg.bounds, len(wells))
+            print(f"  Wrote → {cfg.output} + {bin_path}")
 
         return wells
