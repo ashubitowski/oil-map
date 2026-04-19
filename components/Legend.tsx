@@ -7,9 +7,11 @@ interface Props {
   selectedMonth?: string;
   hasOffshore?: boolean;
   isOverview?: boolean;
+  filteredCount?: number;
+  totalCount?: number;
 }
 
-export default function Legend({ layers, selectedMonth, hasOffshore, isOverview }: Props) {
+export default function Legend({ layers, selectedMonth, hasOffshore, isOverview, filteredCount, totalCount }: Props) {
   const visible = layers.plays || layers.probability || layers.production || layers.wells;
   if (!visible) return null;
 
@@ -50,6 +52,11 @@ export default function Legend({ layers, selectedMonth, hasOffshore, isOverview 
           </div>
           {isOverview && (
             <p className="text-xs text-gray-500 mt-1">Overview · zoom in for all wells</p>
+          )}
+          {!isOverview && filteredCount !== undefined && totalCount !== undefined && filteredCount < totalCount && (
+            <p className="text-xs text-gray-500 mt-1">
+              {filteredCount.toLocaleString()} / {totalCount.toLocaleString()} wells
+            </p>
           )}
           {hasOffshore && (
             <div className="flex items-center gap-1.5 mt-1.5">

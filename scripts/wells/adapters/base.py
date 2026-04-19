@@ -32,7 +32,7 @@ class BaseConfig:
     def resolve_status(self, raw: str) -> str:
         if not raw:
             return "Unknown"
-        return self.status_map.get(raw.strip().upper(), raw.strip() or "Unknown")
+        return self.status_map.get(raw.strip().upper(), "Unknown")
 
     def resolve_well_type(self, raw: str) -> str:
         if not raw:

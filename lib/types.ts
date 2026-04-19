@@ -9,7 +9,7 @@ export interface Well {
   county: string;
   state: string;
   water_depth_ft?: number;
-  source?: "synthetic" | "rrc" | "boem" | "nd-ogic" | "co-ecmc" | "ks-kgs" | "wy-wogcc" | "nm-ocd" | "ca-calgem";
+  source?: "synthetic" | "rrc" | "boem" | "nd-ogic" | "co-ecmc" | "ks-kgs" | "wy-wogcc" | "nm-ocd" | "ca-calgem" | "ok-occ";
   well_type?: "oil" | "gas" | "oil-gas" | "injection" | "disposal" | "other";
 }
 
@@ -47,6 +47,9 @@ export interface WellManifest {
   version: number;
   states: Record<string, WellManifestEntry>;
 }
+
+export type WellStatus = "Active" | "Inactive" | "Plugged & Abandoned" | "Permitted" | "Unknown";
+export const WELL_STATUSES: WellStatus[] = ["Active", "Inactive", "Plugged & Abandoned", "Permitted", "Unknown"];
 
 export type LayerId = "plays" | "wells" | "probability" | "production" | "wells3d";
 

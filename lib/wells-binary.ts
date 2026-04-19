@@ -132,17 +132,38 @@ function depthToColor(depth_ft: number): Color4 {
   return [15, 23, 42, 191];
 }
 
-/** Precompute RGBA Uint8Array for deck.gl getFillColor binary attribute. */
-export function buildFillColors(c: WellColumns): Uint8Array {
+/** Precompute RGBA Uint8Array for deck.gl getFillColor binary attribute.
+ *  If `filter` is provided (Uint8Array of 0/1 per well), filtered-out wells get alpha=0. */
+export function buildFillColors(c: WellColumns, filter?: Uint8Array): Uint8Array {
   const out = new Uint8Array(c.count * 4);
   for (let i = 0; i < c.count; i++) {
     const [r, g, b, a] = depthToColor(c.depths[i]);
     out[i * 4]     = r;
     out[i * 4 + 1] = g;
     out[i * 4 + 2] = b;
-    out[i * 4 + 3] = a;
+    out[i * 4 + 3] = filter ? (filter[i] ? a : 0) : a;
   }
   return out;
+}
+
+/** Build a per-well 0/1 Uint8Array: 1 if well's status is in enabledStatuses, else 0. */
+export function buildStatusFilter(c: WellColumns, enabledStatuses: Set<string>): Uint8Array {
+  const allowed = c.dicts.status.map((s) => enabledStatuses.has(s) ? 1 : 0);
+  const out = new Uint8Array(c.count);
+  for (let i = 0; i < c.count; i++) {
+    out[i] = allowed[c.statusIdxs[i]];
+  }
+  return out;
+}
+
+/** Count wells per canonical status for the chip badges. */
+export function countByStatus(c: WellColumns): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const s of c.dicts.status) counts[s] = 0;
+  for (let i = 0; i < c.count; i++) {
+    counts[c.dicts.status[c.statusIdxs[i]]]++;
+  }
+  return counts;
 }
 
 const BOEM_SOURCE = "boem";

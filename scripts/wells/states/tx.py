@@ -23,11 +23,42 @@ SYMNUM codes (RRC oil/gas well symbology):
   11-19 = Well service types        20+ = Compound/special codes
 """
 
+import gzip
 from pathlib import Path
+from typing import Iterator
 
 from scripts.wells.adapters.arcgis_rest import ArcGISAdapter
 from scripts.wells.adapters.base import BaseConfig
 from scripts.wells.schema import is_in_bounds
+
+_RRC_FILE = Path("data/raw/tx/dbf900.txt.gz")
+
+
+def _build_rrc_index(path: Path) -> dict[str, tuple[int, str]]:
+    """Stream RRC Full Wellbore ASCII → {api8: (depth_ft, spud_date)}."""
+    index: dict[str, tuple[int, str]] = {}
+    with gzip.open(path, "rt", encoding="latin-1", errors="replace") as f:
+        for line in f:
+            if len(line) < 139 or line[:2] != "01":
+                continue
+            api = line[2:10].strip()
+            if not api:
+                continue
+            try:
+                depth_ft = int(line[132:139]) // 10
+            except ValueError:
+                depth_ft = 0
+            if depth_ft > 35000:
+                depth_ft = 0
+            spud_raw = line[20:28].strip()
+            if spud_raw and spud_raw != "00000000":
+                spud = f"{spud_raw[:4]}-{spud_raw[4:6]}-{spud_raw[6:8]}"
+            else:
+                spud = ""
+            existing = index.get(api)
+            if existing is None or depth_ft > existing[0]:
+                index[api] = (depth_ft, spud)
+    return index
 
 AGOL_URL = (
     "https://services.arcgis.com/KTcxiTD9dsQw4r7Z/ArcGIS/rest/services/"
@@ -135,6 +166,17 @@ _config = BaseConfig(
 
 
 class TXAdapter(ArcGISAdapter):
+    _rrc_index: dict[str, tuple[int, str]] = {}
+
+    def parse(self, raw: Path) -> Iterator[dict]:
+        if _RRC_FILE.exists():
+            print(f"  Building RRC depth index from {_RRC_FILE} …", flush=True)
+            self._rrc_index = _build_rrc_index(_RRC_FILE)
+            print(f"  RRC index: {len(self._rrc_index):,} records", flush=True)
+        else:
+            print(f"  WARNING: {_RRC_FILE} not found — depth/spud will be empty", flush=True)
+        yield from super().parse(raw)
+
     def normalize_row(self, row: dict) -> "dict | None":
         cfg = self.config
 
@@ -159,13 +201,17 @@ class TXAdapter(ArcGISAdapter):
         symnum = int(row.get("SYMNUM") or 0)
         well_type, status = _SYMNUM_MAP.get(symnum, ("other", "Unknown"))
 
+        attrs = self._rrc_index.get(api_raw)
+        depth_ft = attrs[0] if attrs else 0
+        spud_date = attrs[1] if attrs else ""
+
         return {
             "id": well_id,
             "lat": round(lat, 6),
             "lon": round(lon, 6),
-            "depth_ft": 0,         # not available from this source
+            "depth_ft": depth_ft,
             "operator": "Unknown",
-            "spud_date": "",
+            "spud_date": spud_date,
             "status": status,
             "county": county,
             "state": "TX",

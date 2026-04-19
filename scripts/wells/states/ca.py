@@ -42,9 +42,15 @@ _config = BaseConfig(
     output=Path("public/data/wells-ca.json"),
     raw_dir=Path("data/raw/ca"),
     status_map={
-        "Active": "Active", "Idle": "Inactive",
-        "Plugged": "Plugged & Abandoned", "New": "Active",
-        "Canceled": "Inactive", "Buried": "Inactive",
+        "ACTIVE": "Active",
+        "NEW": "Active",
+        "IDLE": "Inactive",
+        "CANCELED": "Inactive",
+        "CANCELLED": "Inactive",
+        "BURIED": "Inactive",
+        "PLUGGED": "Plugged & Abandoned",
+        "PLUGGEDONLY": "Plugged & Abandoned",
+        "NOTCALGEMJURISDICTION": "Unknown",
     },
     well_type_map={},  # not used — CAAdapter uses WellTypeLabel
     field_map={

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LayerState, LayerId, Well, ProductionBasin, ProductionHistory, WellManifest } from "@/lib/types";
-import { loadGeoJSON, loadJSON, loadBin } from "@/lib/data-loader";
+import { loadGeoJSON, loadJSON, loadBin, loadWellsState } from "@/lib/data-loader";
+import type { PrebuiltAttrs } from "@/lib/data-loader";
 import {
   WellColumns,
   decodeWellsBin,
@@ -12,9 +13,11 @@ import {
   buildFillColors,
   buildLineWidths,
   buildLineColors,
-  mergeBinaryColumns,
+  buildStatusFilter,
+  countByStatus,
 } from "@/lib/wells-binary";
 import { readUrlState, useUrlSync, type UrlSelection } from "@/lib/use-url-state";
+import { WellStatus, WELL_STATUSES } from "@/lib/types";
 import LayerToggle from "./LayerToggle";
 import WellPopup from "./WellPopup";
 import ProductionPopup from "./ProductionPopup";
@@ -75,8 +78,10 @@ export default function Map() {
   );
   const wellsDataRef = useRef<Well[]>([]);
   const wellColumnsRef = useRef<WellColumns | null>(null);
+  const rebuildAndRenderRef = useRef<(() => void) | null>(null);
   const manifestRef = useRef<WellManifest | null>(null);
   const perStateColsRef = useRef<Record<string, WellColumns>>({});
+  const perStateAttrsRef = useRef<Record<string, PrebuiltAttrs>>({});
   const stateStatusRef = useRef<Record<string, "idle" | "loading" | "loaded">>({});
   const overviewColsRef = useRef<WellColumns | null>(null);
   const overviewStatusRef = useRef<"idle" | "loading" | "loaded">("idle");
@@ -115,6 +120,11 @@ export default function Map() {
   );
   const [productionMonths, setProductionMonths] = useState<string[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  const [enabledStatuses, setEnabledStatuses] = useState<Set<WellStatus>>(
+    () => new Set<WellStatus>(["Active"])
+  );
+  const [statusCounts, setStatusCounts] = useState<Partial<Record<WellStatus, number>>>({});
+  const enabledStatusesRef = useRef<Set<WellStatus>>(new Set<WellStatus>(["Active"]));
 
   // Initialize map
   useEffect(() => {
@@ -259,19 +269,48 @@ export default function Map() {
 
     const OVERVIEW_MAX_ZOOM = 6;
 
-    const renderWells = async (cols: WellColumns | null, syntheticWells: Well[], overviewCols: WellColumns | null) => {
+    const renderWells = async (syntheticWells: Well[], overviewCols: WellColumns | null) => {
       if (!overlayRef.current) return;
       const { ScatterplotLayer, ColumnLayer } = await import("@deck.gl/layers");
+      const perStateCols = perStateColsRef.current;
+      const filterKey = [...enabledStatusesRef.current].sort().join(",");
 
       if (layers.wells3d) {
-        const allWells = cols
-          ? [...syntheticWells, ...Array.from({ length: cols.count }, (_, i) => columnsToWell(cols, i))]
-          : syntheticWells;
-        overlayRef.current.setProps({
-          layers: [
+        const deckLayers3d = [];
+
+        // Per-state ColumnLayers using prebuilt binary attributes — no Well[] materialization
+        for (const [key, cols] of Object.entries(perStateCols)) {
+          const attrs = perStateAttrsRef.current[key];
+          if (!attrs) continue;
+          deckLayers3d.push(
             new ColumnLayer({
-              id: "wells-3d",
-              data: allWells,
+              id: `wells-3d-${key}`,
+              data: { length: cols.count, attributes: {
+                getPosition:  { value: attrs.positions,   size: 2 },
+                getElevation: { value: attrs.elevations,  size: 1 },
+                getFillColor: { value: attrs.depthColors, size: 4, normalized: true },
+              }},
+              radius: 800,
+              diskResolution: 6,
+              elevationScale: 1,
+              pickable: true,
+              onClick: (info) => {
+                if (info.index >= 0) {
+                  const well = columnsToWell(cols, info.index);
+                  setSelectedWell(well);
+                  syncSelectionRef.current({ type: "well", id: well.id });
+                }
+              },
+            })
+          );
+        }
+
+        // Synthetic wells still use accessor-based path (small count, not worth binary)
+        if (syntheticWells.length > 0) {
+          deckLayers3d.push(
+            new ColumnLayer({
+              id: "wells-3d-synthetic",
+              data: syntheticWells,
               getPosition: (d: Well) => [d.lon, d.lat],
               getElevation: (d: Well) => d.depth_ft / 10,
               getFillColor: (d: Well) => depthToColor(d.depth_ft),
@@ -279,9 +318,11 @@ export default function Map() {
               diskResolution: 6,
               elevationScale: 1,
               pickable: true,
-            }),
-          ],
-        });
+            })
+          );
+        }
+
+        overlayRef.current.setProps({ layers: deckLayers3d });
         if (!pitchAutoSetRef.current) {
           prevPitchRef.current = map.getPitch();
           pitchAutoSetRef.current = true;
@@ -316,20 +357,43 @@ export default function Map() {
           );
         }
 
-        if (cols && cols.count > 0) {
-          const positions  = buildPositions(cols);
-          const fillColors = buildFillColors(cols);
-          const lineWidths = buildLineWidths(cols);
-          const lineColors = buildLineColors(cols);
+        // Per-state layers — no merge needed; stable arrays cached per state
+        const aggregateCounts: Partial<Record<WellStatus, number>> = {};
+        for (const [key, cols] of Object.entries(perStateCols)) {
+          let attrs = perStateAttrsRef.current[key];
+          if (!attrs) {
+            attrs = {
+              positions:   buildPositions(cols),
+              lineWidths:  buildLineWidths(cols),
+              lineColors:  buildLineColors(cols),
+              fillColors:  new Uint8Array(0),
+              elevations:  new Float32Array(0),
+              depthColors: new Uint8Array(0),
+              filteredCount: 0,
+              filterKey: "",
+              rawCounts: countByStatus(cols),
+            };
+          }
+          if (attrs.filterKey !== filterKey) {
+            const sf = buildStatusFilter(cols, enabledStatusesRef.current);
+            attrs.fillColors = buildFillColors(cols, sf);
+            attrs.filteredCount = sf.reduce((s, v) => s + v, 0);
+            attrs.filterKey = filterKey;
+          }
+          perStateAttrsRef.current[key] = attrs;
+
+          for (const [s, n] of Object.entries(attrs.rawCounts)) {
+            aggregateCounts[s as WellStatus] = (aggregateCounts[s as WellStatus] ?? 0) + n;
+          }
 
           deckLayers.push(
             new ScatterplotLayer({
-              id: "wells-2d-real",
+              id: `wells-2d-real-${key}`,
               data: { length: cols.count, attributes: {
-                getPosition:  { value: positions,  size: 2 },
-                getFillColor: { value: fillColors,  size: 4, normalized: true },
-                getLineWidth: { value: lineWidths,  size: 1 },
-                getLineColor: { value: lineColors,  size: 4, normalized: true },
+                getPosition:  { value: attrs.positions,  size: 2 },
+                getFillColor: { value: attrs.fillColors,  size: 4, normalized: true },
+                getLineWidth: { value: attrs.lineWidths,  size: 1 },
+                getLineColor: { value: attrs.lineColors,  size: 4, normalized: true },
               }},
               radiusUnits: "pixels",
               getRadius: 3,
@@ -339,7 +403,7 @@ export default function Map() {
               stroked: true,
               lineWidthUnits: "pixels",
               onClick: (info) => {
-                if (info.index >= 0 && cols) {
+                if (info.index >= 0) {
                   const well = columnsToWell(cols, info.index);
                   setSelectedWell(well);
                   syncSelectionRef.current({ type: "well", id: well.id });
@@ -352,11 +416,16 @@ export default function Map() {
           );
         }
 
-        if (syntheticWells.length > 0) {
+        setStatusCounts(aggregateCounts);
+
+        const visibleSynthetic = syntheticWells.filter(
+          (d) => enabledStatusesRef.current.has(d.status as WellStatus)
+        );
+        if (visibleSynthetic.length > 0) {
           deckLayers.push(
             new ScatterplotLayer({
               id: "wells-2d-synthetic",
-              data: syntheticWells,
+              data: visibleSynthetic,
               getPosition: (d: Well) => [d.lon, d.lat],
               getFillColor: (d: Well) => depthToColor(d.depth_ft),
               radiusUnits: "pixels",
@@ -391,14 +460,11 @@ export default function Map() {
       }
     };
 
-    // Rebuild merged columns from all loaded per-state columns and re-render
+    // Re-render from per-state cache — no merge allocation
     const rebuildAndRender = () => {
-      const loaded = Object.values(perStateColsRef.current);
-      wellColumnsRef.current = loaded.length === 0 ? null
-        : loaded.length === 1 ? loaded[0]
-        : mergeBinaryColumns(loaded);
-      renderWells(wellColumnsRef.current, wellsDataRef.current, overviewColsRef.current).catch(console.error);
+      renderWells(wellsDataRef.current, overviewColsRef.current).catch(console.error);
     };
+    rebuildAndRenderRef.current = rebuildAndRender;
 
     // Start loading any manifest states whose bbox intersects the current viewport
     const checkViewport = () => {
@@ -417,22 +483,23 @@ export default function Map() {
         startedAny = true;
         setLoadingStates((prev) => [...prev, key]);
 
-        const load: Promise<WellColumns | null> = entry.file.endsWith(".bin")
-          ? loadBin(`/data/${entry.file}`).then(decodeWellsBin)
+        const loadState: Promise<WellColumns | null> = entry.file.endsWith(".bin")
+          ? loadWellsState(key, `/data/${entry.file}`).then(({ cols, attrs }) => {
+              perStateColsRef.current[key] = cols;
+              perStateAttrsRef.current[key] = attrs;
+              return cols;
+            })
           : loadJSON<Well[]>(`/data/${entry.file}`).then((wells) => {
               wellsDataRef.current = [...wellsDataRef.current, ...wells];
               return null;
             });
 
-        load.then((cols) => {
-          if (cols) {
-            perStateColsRef.current[key] = cols;
-            if (urlSelectionRef.current?.type === "well") {
-              const idx = findWellIndexById(cols, urlSelectionRef.current.id);
-              if (idx >= 0) {
-                setSelectedWell(columnsToWell(cols, idx));
-                urlSelectionRef.current = undefined;
-              }
+        loadState.then((cols) => {
+          if (cols && urlSelectionRef.current?.type === "well") {
+            const idx = findWellIndexById(cols, urlSelectionRef.current.id);
+            if (idx >= 0) {
+              setSelectedWell(columnsToWell(cols, idx));
+              urlSelectionRef.current = undefined;
             }
           }
           stateStatusRef.current[key] = "loaded";
@@ -447,6 +514,34 @@ export default function Map() {
 
       // No new loads started → all visible states are already loaded/loading; re-render with current data
       if (!startedAny) rebuildAndRender();
+    };
+
+    // Free memory for states whose bbox no longer intersects the viewport (+ 50% padding per side)
+    const evictOffscreenStates = () => {
+      if (!manifestRef.current) return;
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const lngPad = (ne.lng - sw.lng) * 0.5;
+      const latPad = (ne.lat - sw.lat) * 0.5;
+      const extMinLng = sw.lng - lngPad;
+      const extMaxLng = ne.lng + lngPad;
+      const extMinLat = sw.lat - latPad;
+      const extMaxLat = ne.lat + latPad;
+
+      let evictedAny = false;
+      for (const [key, entry] of Object.entries(manifestRef.current.states)) {
+        if (stateStatusRef.current[key] !== "loaded") continue;
+        const [minLon, minLat, maxLon, maxLat] = entry.bbox;
+        const intersects = !(extMinLng >= maxLon || extMaxLng <= minLon || extMinLat >= maxLat || extMaxLat <= minLat);
+        if (!intersects) {
+          delete perStateColsRef.current[key];
+          delete perStateAttrsRef.current[key];
+          stateStatusRef.current[key] = "idle";
+          evictedAny = true;
+        }
+      }
+      if (evictedAny) rebuildAndRender();
     };
 
     // Load manifest + synthetic wells once, then check viewport
@@ -480,7 +575,7 @@ export default function Map() {
       if (overviewStatusRef.current === "idle") {
         overviewStatusRef.current = "loading";
         loadBin("/data/wells-overview.bin")
-          .then(decodeWellsBin)
+          .then((buf) => decodeWellsBin(buf))
           .then((cols) => {
             overviewColsRef.current = cols;
             overviewStatusRef.current = "loaded";
@@ -498,7 +593,10 @@ export default function Map() {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const onMoveEnd = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(checkViewport, 250);
+      debounceTimer = setTimeout(() => {
+        checkViewport();
+        evictOffscreenStates();
+      }, 250);
     };
     const onZoomEnd = () => rebuildAndRender();
     map.on("moveend", onMoveEnd);
@@ -740,6 +838,36 @@ export default function Map() {
   const layersRef = useRef(layers);
   layersRef.current = layers;
 
+  // Keep ref in sync and trigger re-render when filter changes
+  useEffect(() => {
+    enabledStatusesRef.current = enabledStatuses;
+    rebuildAndRenderRef.current?.();
+  }, [enabledStatuses]);
+
+  // Auto-close popup when selected well's status gets filtered out
+  useEffect(() => {
+    if (selectedWell && !enabledStatuses.has(selectedWell.status as WellStatus)) {
+      setSelectedWell(null);
+    }
+  }, [enabledStatuses, selectedWell]);
+
+  const toggleStatus = useCallback((status: WellStatus) => {
+    setEnabledStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        if (next.size === 1) return prev; // keep at least one
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  }, []);
+
+  const resetStatuses = useCallback(() => {
+    setEnabledStatuses(new Set<WellStatus>(["Active"]));
+  }, []);
+
   const toggleLayer = useCallback((id: LayerId) => {
     const next = { ...layersRef.current, [id]: !layersRef.current[id] };
     setLayers(next);
@@ -756,8 +884,22 @@ export default function Map() {
       <div ref={containerRef} className="w-full h-full" />
       {mapReady && (
         <>
-          <LayerToggle layers={layers} onToggle={toggleLayer} />
-          <Legend layers={layers} selectedMonth={selectedMonth || undefined} hasOffshore={hasOffshore} isOverview={layers.wells && mapZoom < 6} />
+          <LayerToggle
+            layers={layers}
+            onToggle={toggleLayer}
+            enabledStatuses={enabledStatuses}
+            statusCounts={statusCounts}
+            onStatusToggle={toggleStatus}
+            onStatusReset={resetStatuses}
+          />
+          <Legend
+            layers={layers}
+            selectedMonth={selectedMonth || undefined}
+            hasOffshore={hasOffshore}
+            isOverview={layers.wells && mapZoom < 6}
+            filteredCount={Object.keys(perStateColsRef.current).length > 0 ? Array.from(enabledStatuses).reduce((s, st) => s + (statusCounts[st] ?? 0), 0) : undefined}
+            totalCount={Object.values(statusCounts).reduce((a, b) => a + (b ?? 0), 0) || undefined}
+          />
           <LoadBanner errors={loadErrors} loading={loadingStates} />
           {selectedWell && (
             <WellPopup

@@ -17,6 +17,7 @@ const SOURCE_LABELS: Record<string, string> = {
   "wy-wogcc": "WY WOGCC",
   "nm-ocd": "NM OCD",
   "ca-calgem": "CA CalGEM",
+  "ok-occ": "OK OCC",
 };
 
 export default function WellPopup({ well, onClose }: Props) {

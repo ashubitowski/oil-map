@@ -22,6 +22,7 @@ Layout (little-endian throughout):
   [all id bytes concatenated, in row order]
 """
 
+import gzip
 import json
 import struct
 from pathlib import Path
@@ -101,25 +102,21 @@ def write_wells_bin(wells: list, path: Path) -> None:
     prefix_size = 10 + len(header_bytes)
     pad = (4 - (prefix_size % 4)) % 4
 
+    bin_bytes = (
+        MAGIC
+        + struct.pack("<H", VERSION)
+        + struct.pack("<I", len(header_bytes))
+        + header_bytes
+        + (b"\x00" * pad)
+        + lons_data + lats_data + depths_data
+        + op_data + co_data + sd_data + id_len_data
+        + st_data + wt_data + sr_data
+        + id_data
+    )
+
     with open(path, "wb") as f:
-        f.write(MAGIC)
-        f.write(struct.pack("<H", VERSION))
-        f.write(struct.pack("<I", len(header_bytes)))
-        f.write(header_bytes)
-        if pad:
-            f.write(b"\x00" * pad)
-        # 4-byte columns
-        f.write(lons_data)
-        f.write(lats_data)
-        f.write(depths_data)
-        # 2-byte columns
-        f.write(op_data)
-        f.write(co_data)
-        f.write(sd_data)
-        f.write(id_len_data)
-        # 1-byte columns
-        f.write(st_data)
-        f.write(wt_data)
-        f.write(sr_data)
-        # variable
-        f.write(id_data)
+        f.write(bin_bytes)
+
+    gz_path = path.with_suffix(path.suffix + ".gz")
+    with open(gz_path, "wb") as f:
+        f.write(gzip.compress(bin_bytes, compresslevel=9))

@@ -94,7 +94,8 @@ def main() -> None:
     print(f"\nSampling done: {len(sampled):,} overview wells from {len(bin_files)} state file(s)")
 
     write_wells_bin(sampled, OUT)
-    print(f"Wrote {OUT} ({OUT.stat().st_size / 1e6:.2f} MB)")
+    gz = OUT.with_suffix(OUT.suffix + ".gz")
+    print(f"Wrote {OUT} ({OUT.stat().st_size / 1e6:.2f} MB) + {gz.name} ({gz.stat().st_size / 1e6:.2f} MB)")
 
 
 if __name__ == "__main__":

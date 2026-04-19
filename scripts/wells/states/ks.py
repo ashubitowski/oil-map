@@ -54,10 +54,31 @@ _config = BaseConfig(
     output=Path("public/data/wells-ks.json"),
     raw_dir=Path("data/raw/ks"),
     status_map={
-        "A": "Active", "AB": "Active", "ACT": "Active",
-        "I": "Inactive", "P": "Plugged", "PA": "Plugged & Abandoned",
-        "D&A": "Plugged & Abandoned", "TA": "Temporarily Abandoned",
-        "D": "Drilling", "PR": "Permitted",
+        # Terminal suffixes (after splitting compound TYPE-STATUS codes on "-")
+        "P&A": "Plugged & Abandoned",
+        "PA": "Plugged & Abandoned",
+        "D&A": "Plugged & Abandoned",
+        "TA": "Inactive",
+        "SI": "Inactive",
+        "SHUTIN": "Inactive",
+        # Solo codes (no dash) — entire value is the status
+        "OIL": "Active",
+        "GAS": "Active",
+        "EOR": "Active",
+        "SWD": "Active",
+        "INJ": "Active",
+        "CBM": "Active",
+        "A": "Active",
+        "ACT": "Active",
+        "AB": "Active",
+        "I": "Inactive",
+        "D": "Inactive",
+        "LOC": "Permitted",
+        "INTENT": "Permitted",
+        "PERMIT": "Permitted",
+        "DRL": "Permitted",
+        "DRY": "Plugged & Abandoned",
+        "SERVICE": "Unknown",
     },
     well_type_map={},  # not used — KSAdapter infers from IP_OIL/IP_GAS
     field_map={
@@ -107,8 +128,14 @@ class KSAdapter(DirectDownloadAdapter):
 
         api = col(row, "API_NUMBER")
         operator = col(row, "CURR_OPERATOR") or col(row, "ORIG_OPERATOR") or "Unknown"
-        status_raw = col(row, "STATUS") or col(row, "STATUS2")
-        status = cfg.resolve_status(status_raw)
+        status_raw = (col(row, "STATUS") or col(row, "STATUS2") or "").upper().strip()
+        # KS uses compound TYPE-STATUS codes like "OIL-P&A", "GAS-TA".
+        # Extract the status suffix after "-"; treat solo codes as the status directly.
+        if "-" in status_raw:
+            lookup = status_raw.split("-", 1)[1].strip()
+        else:
+            lookup = status_raw
+        status = cfg.resolve_status(lookup)
         spud = parse_spud_date(col(row, "SPUD"))
         county = _county_from_api(api)
 
