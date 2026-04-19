@@ -332,7 +332,7 @@ export default function Map() {
       } else {
         const zoom = mapRef.current?.getZoom() ?? OVERVIEW_MAX_ZOOM;
         // t=0 at zoom 5.5, t=1 at zoom 6.5 — crossfade window of 1°
-        const t = Math.max(0, Math.min(1, zoom - 5.5));
+        const t = Math.max(0, Math.min(1, zoom - 6.5));
         const overviewOpacity = (1 - t) * 0.85;
         const detailOpacity   = t * 0.75;
 
