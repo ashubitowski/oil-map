@@ -30,6 +30,13 @@ body {
   z-index: 30;
 }
 
+.maplibregl-ctrl-top-left,
+.maplibregl-ctrl-top-right,
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  z-index: 30;
+}
+
 .maplibregl-popup-content {
   background: transparent;
   box-shadow: none;
