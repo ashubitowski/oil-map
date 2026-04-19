@@ -75,6 +75,10 @@ export default function Map() {
   );
   const wellsDataRef = useRef<Well[]>([]);
   const wellColumnsRef = useRef<WellColumns | null>(null);
+  const manifestRef = useRef<WellManifest | null>(null);
+  const perStateColsRef = useRef<Record<string, WellColumns>>({});
+  const stateStatusRef = useRef<Record<string, "idle" | "loading" | "loaded">>({});
+  const [loadingStates, setLoadingStates] = useState<string[]>([]);
 
   const { syncLayers, syncViewport, syncSelection, syncMonth } = useUrlSync();
   const syncViewportRef = useRef(syncViewport);
@@ -233,190 +237,226 @@ export default function Map() {
     }
   }, [layers.plays, mapReady]);
 
-  // Wells layer — all rendering via deck.gl overlay (GPU buffers, no MapLibre GeoJSON source)
+  // Wells layer — viewport-driven loading: only fetch states visible in the current map bounds
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
 
-    if (layers.wells) {
-      const renderWells = async (cols: WellColumns | null, syntheticWells: Well[]) => {
-        if (!overlayRef.current) return;
-        const { ScatterplotLayer, ColumnLayer } = await import("@deck.gl/layers");
-
-        if (layers.wells3d) {
-          // 3D mode: accessor-based for simplicity (rarely used)
-          const allWells = cols
-            ? [...syntheticWells, ...Array.from({ length: cols.count }, (_, i) => columnsToWell(cols, i))]
-            : syntheticWells;
-          overlayRef.current.setProps({
-            layers: [
-              new ColumnLayer({
-                id: "wells-3d",
-                data: allWells,
-                getPosition: (d: Well) => [d.lon, d.lat],
-                getElevation: (d: Well) => d.depth_ft / 10,
-                getFillColor: (d: Well) => depthToColor(d.depth_ft),
-                radius: 800,
-                diskResolution: 6,
-                elevationScale: 1,
-                pickable: true,
-              }),
-            ],
-          });
-          if (!pitchAutoSetRef.current) {
-            prevPitchRef.current = map.getPitch();
-            pitchAutoSetRef.current = true;
-            map.easeTo({ pitch: 45 });
-          }
-        } else {
-          const deckLayers = [];
-
-          // Real state wells — binary attributes, zero accessor calls
-          if (cols && cols.count > 0) {
-            const positions  = buildPositions(cols);
-            const fillColors = buildFillColors(cols);
-            const lineWidths = buildLineWidths(cols);
-            const lineColors = buildLineColors(cols);
-
-            deckLayers.push(
-              new ScatterplotLayer({
-                id: "wells-2d-real",
-                data: { length: cols.count, attributes: {
-                  getPosition:  { value: positions,  size: 2 },
-                  getFillColor: { value: fillColors,  size: 4, normalized: true },
-                  getLineWidth: { value: lineWidths,  size: 1 },
-                  getLineColor: { value: lineColors,  size: 4, normalized: true },
-                }},
-                radiusUnits: "pixels",
-                getRadius: 3,
-                opacity: 0.75,
-                pickable: true,
-                stroked: true,
-                lineWidthUnits: "pixels",
-                onClick: (info) => {
-                  if (info.index >= 0 && cols) {
-                    const well = columnsToWell(cols, info.index);
-                    setSelectedWell(well);
-                    syncSelectionRef.current({ type: "well", id: well.id });
-                  }
-                },
-                onHover: (info) => {
-                  map.getCanvas().style.cursor = info.index >= 0 ? "pointer" : "";
-                },
-              })
-            );
-          }
-
-          // Synthetic wells — small count, accessor-based
-          if (syntheticWells.length > 0) {
-            deckLayers.push(
-              new ScatterplotLayer({
-                id: "wells-2d-synthetic",
-                data: syntheticWells,
-                getPosition: (d: Well) => [d.lon, d.lat],
-                getFillColor: (d: Well) => depthToColor(d.depth_ft),
-                radiusUnits: "pixels",
-                getRadius: 3,
-                opacity: 0.75,
-                pickable: true,
-                stroked: true,
-                lineWidthUnits: "pixels",
-                getLineWidth: 0.5,
-                getLineColor: [30, 58, 95, 150] as Color4,
-                onClick: (info) => {
-                  const well = info.object as Well | null;
-                  if (well) {
-                    setSelectedWell(well);
-                    syncSelectionRef.current({ type: "well", id: well.id });
-                  }
-                },
-                onHover: (info) => {
-                  map.getCanvas().style.cursor = info.object ? "pointer" : "";
-                },
-              })
-            );
-          }
-
-          overlayRef.current.setProps({ layers: deckLayers });
-
-          if (pitchAutoSetRef.current) {
-            pitchAutoSetRef.current = false;
-            map.easeTo({ pitch: prevPitchRef.current });
-          }
-        }
-      };
-
-      const loadAndRender = async () => {
-        if (wellsDataRef.current.length === 0 && !wellColumnsRef.current) {
-          const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json");
-          const stateEntries = Object.entries(manifest.states).filter(
-            ([key]) => key !== "OFFSHORE"
-          );
-          const binEntries = stateEntries.filter(([, e]) => e.file.endsWith(".bin"));
-          const jsonEntries = stateEntries.filter(([, e]) => !e.file.endsWith(".bin"));
-
-          const [syntheticWells, offshoreWells, ...stateResults] = await Promise.all([
-            loadJSON<Well[]>("/data/wells.json"),
-            loadJSON<Well[]>("/data/wells-offshore.json").catch(() => [] as Well[]),
-            ...binEntries.map(([key, e]) => loadBin(`/data/${e.file}`).then(buf => {
-              try { return decodeWellsBin(buf); }
-              catch (err) { throw new Error(`${key} (${e.file}): ${err instanceof Error ? err.message : err}`); }
-            })),
-            ...jsonEntries.map(([, e]) => loadJSON<Well[]>(`/data/${e.file}`).catch(() => [] as Well[])),
-          ]) as [Well[], Well[], ...(WellColumns | Well[])[]];
-
-          setHasOffshore((offshoreWells as Well[]).length > 0);
-
-          const binCols   = stateResults.slice(0, binEntries.length) as WellColumns[];
-          const jsonWells = stateResults.slice(binEntries.length) as Well[][];
-
-          // Merge binary columns — pick the first (or null if none); multi-state merge handled in Stage 3+
-          // For now, concatenate all into one via a simple flat decode
-          let mergedCols: WellColumns | null = null;
-          if (binCols.length > 0) {
-            if (binCols.length === 1) {
-              mergedCols = binCols[0];
-            } else {
-              // Multi-state: concatenate typed arrays (dicts will be correct since each file
-              // has its own dicts embedded; we keep per-column refs and decode on click)
-              mergedCols = mergeBinaryColumns(binCols);
-            }
-          }
-          wellColumnsRef.current = mergedCols;
-
-          const coveredStates = new Set(stateEntries.map(([k]) => k));
-          const synthetic = (syntheticWells as Well[]).filter((w) => !coveredStates.has(w.state));
-          const jsonFlat  = jsonWells.flat();
-          const offshoreArr = offshoreWells as Well[];
-          wellsDataRef.current = [...synthetic, ...jsonFlat, ...offshoreArr];
-
-          // URL restoration
-          if (urlSelectionRef.current?.type === "well") {
-            const targetId = urlSelectionRef.current.id;
-            if (mergedCols) {
-              const idx = findWellIndexById(mergedCols, targetId);
-              if (idx >= 0) setSelectedWell(columnsToWell(mergedCols, idx));
-            }
-            if (!selectedWell) {
-              const fallback = wellsDataRef.current.find((w) => w.id === targetId);
-              if (fallback) setSelectedWell(fallback);
-            }
-            urlSelectionRef.current = undefined;
-          }
-        }
-
-        await renderWells(wellColumnsRef.current, wellsDataRef.current);
-      };
-
-      loadAndRender().catch((err) => { console.error("[wells] load error:", err); reportLoadError("wells", err); });
-    } else {
+    if (!layers.wells) {
       overlayRef.current?.setProps({ layers: [] });
       if (pitchAutoSetRef.current) {
         pitchAutoSetRef.current = false;
         map.easeTo({ pitch: prevPitchRef.current });
       }
       setSelectedWell(null);
+      return;
     }
+
+    const renderWells = async (cols: WellColumns | null, syntheticWells: Well[]) => {
+      if (!overlayRef.current) return;
+      const { ScatterplotLayer, ColumnLayer } = await import("@deck.gl/layers");
+
+      if (layers.wells3d) {
+        const allWells = cols
+          ? [...syntheticWells, ...Array.from({ length: cols.count }, (_, i) => columnsToWell(cols, i))]
+          : syntheticWells;
+        overlayRef.current.setProps({
+          layers: [
+            new ColumnLayer({
+              id: "wells-3d",
+              data: allWells,
+              getPosition: (d: Well) => [d.lon, d.lat],
+              getElevation: (d: Well) => d.depth_ft / 10,
+              getFillColor: (d: Well) => depthToColor(d.depth_ft),
+              radius: 800,
+              diskResolution: 6,
+              elevationScale: 1,
+              pickable: true,
+            }),
+          ],
+        });
+        if (!pitchAutoSetRef.current) {
+          prevPitchRef.current = map.getPitch();
+          pitchAutoSetRef.current = true;
+          map.easeTo({ pitch: 45 });
+        }
+      } else {
+        const deckLayers = [];
+
+        if (cols && cols.count > 0) {
+          const positions  = buildPositions(cols);
+          const fillColors = buildFillColors(cols);
+          const lineWidths = buildLineWidths(cols);
+          const lineColors = buildLineColors(cols);
+
+          deckLayers.push(
+            new ScatterplotLayer({
+              id: "wells-2d-real",
+              data: { length: cols.count, attributes: {
+                getPosition:  { value: positions,  size: 2 },
+                getFillColor: { value: fillColors,  size: 4, normalized: true },
+                getLineWidth: { value: lineWidths,  size: 1 },
+                getLineColor: { value: lineColors,  size: 4, normalized: true },
+              }},
+              radiusUnits: "pixels",
+              getRadius: 3,
+              opacity: 0.75,
+              pickable: true,
+              stroked: true,
+              lineWidthUnits: "pixels",
+              onClick: (info) => {
+                if (info.index >= 0 && cols) {
+                  const well = columnsToWell(cols, info.index);
+                  setSelectedWell(well);
+                  syncSelectionRef.current({ type: "well", id: well.id });
+                }
+              },
+              onHover: (info) => {
+                map.getCanvas().style.cursor = info.index >= 0 ? "pointer" : "";
+              },
+            })
+          );
+        }
+
+        if (syntheticWells.length > 0) {
+          deckLayers.push(
+            new ScatterplotLayer({
+              id: "wells-2d-synthetic",
+              data: syntheticWells,
+              getPosition: (d: Well) => [d.lon, d.lat],
+              getFillColor: (d: Well) => depthToColor(d.depth_ft),
+              radiusUnits: "pixels",
+              getRadius: 3,
+              opacity: 0.75,
+              pickable: true,
+              stroked: true,
+              lineWidthUnits: "pixels",
+              getLineWidth: 0.5,
+              getLineColor: [30, 58, 95, 150] as Color4,
+              onClick: (info) => {
+                const well = info.object as Well | null;
+                if (well) {
+                  setSelectedWell(well);
+                  syncSelectionRef.current({ type: "well", id: well.id });
+                }
+              },
+              onHover: (info) => {
+                map.getCanvas().style.cursor = info.object ? "pointer" : "";
+              },
+            })
+          );
+        }
+
+        overlayRef.current.setProps({ layers: deckLayers });
+
+        if (pitchAutoSetRef.current) {
+          pitchAutoSetRef.current = false;
+          map.easeTo({ pitch: prevPitchRef.current });
+        }
+      }
+    };
+
+    // Rebuild merged columns from all loaded per-state columns and re-render
+    const rebuildAndRender = () => {
+      const loaded = Object.values(perStateColsRef.current);
+      wellColumnsRef.current = loaded.length === 0 ? null
+        : loaded.length === 1 ? loaded[0]
+        : mergeBinaryColumns(loaded);
+      renderWells(wellColumnsRef.current, wellsDataRef.current).catch(console.error);
+    };
+
+    // Start loading any manifest states whose bbox intersects the current viewport
+    const checkViewport = () => {
+      if (!manifestRef.current) return;
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+
+      let startedAny = false;
+      for (const [key, entry] of Object.entries(manifestRef.current.states)) {
+        if (stateStatusRef.current[key] !== "idle") continue;
+        const [minLon, minLat, maxLon, maxLat] = entry.bbox;
+        if (sw.lng >= maxLon || ne.lng <= minLon || sw.lat >= maxLat || ne.lat <= minLat) continue;
+
+        stateStatusRef.current[key] = "loading";
+        startedAny = true;
+        setLoadingStates((prev) => [...prev, key]);
+
+        const load: Promise<WellColumns | null> = entry.file.endsWith(".bin")
+          ? loadBin(`/data/${entry.file}`).then(decodeWellsBin)
+          : loadJSON<Well[]>(`/data/${entry.file}`).then((wells) => {
+              wellsDataRef.current = [...wellsDataRef.current, ...wells];
+              return null;
+            });
+
+        load.then((cols) => {
+          if (cols) {
+            perStateColsRef.current[key] = cols;
+            if (urlSelectionRef.current?.type === "well") {
+              const idx = findWellIndexById(cols, urlSelectionRef.current.id);
+              if (idx >= 0) {
+                setSelectedWell(columnsToWell(cols, idx));
+                urlSelectionRef.current = undefined;
+              }
+            }
+          }
+          stateStatusRef.current[key] = "loaded";
+          setLoadingStates((prev) => prev.filter((k) => k !== key));
+          rebuildAndRender();
+        }).catch((err) => {
+          stateStatusRef.current[key] = "idle";
+          setLoadingStates((prev) => prev.filter((k) => k !== key));
+          reportLoadError(`wells-${key.toLowerCase()}`, err);
+        });
+      }
+
+      // No new loads started → all visible states are already loaded/loading; re-render with current data
+      if (!startedAny) rebuildAndRender();
+    };
+
+    // Load manifest + synthetic wells once, then check viewport
+    const bootstrap = async () => {
+      if (!manifestRef.current) {
+        const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json");
+        manifestRef.current = manifest;
+        for (const key of Object.keys(manifest.states)) {
+          if (!(key in stateStatusRef.current)) stateStatusRef.current[key] = "idle";
+        }
+      }
+
+      if (wellsDataRef.current.length === 0) {
+        const [synWells, offshoreWells] = await Promise.all([
+          loadJSON<Well[]>("/data/wells.json"),
+          loadJSON<Well[]>("/data/wells-offshore.json").catch(() => [] as Well[]),
+        ]);
+        setHasOffshore((offshoreWells as Well[]).length > 0);
+        const coveredStates = new Set(Object.keys(manifestRef.current!.states));
+        wellsDataRef.current = [
+          ...synWells.filter((w) => !coveredStates.has(w.state)),
+          ...(offshoreWells as Well[]),
+        ];
+        if (urlSelectionRef.current?.type === "well") {
+          const fallback = wellsDataRef.current.find((w) => w.id === urlSelectionRef.current!.id);
+          if (fallback) { setSelectedWell(fallback); urlSelectionRef.current = undefined; }
+        }
+      }
+
+      checkViewport();
+    };
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const onMoveEnd = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(checkViewport, 250);
+    };
+    map.on("moveend", onMoveEnd);
+
+    bootstrap().catch((err) => { console.error("[wells] bootstrap error:", err); reportLoadError("wells", err); });
+
+    return () => {
+      map.off("moveend", onMoveEnd);
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, [layers.wells, layers.wells3d, mapReady]);
 
   // Probability layer
@@ -664,7 +704,7 @@ export default function Map() {
         <>
           <LayerToggle layers={layers} onToggle={toggleLayer} />
           <Legend layers={layers} selectedMonth={selectedMonth || undefined} hasOffshore={hasOffshore} />
-          <LoadBanner errors={loadErrors} />
+          <LoadBanner errors={loadErrors} loading={loadingStates} />
           {selectedWell && (
             <WellPopup
               well={selectedWell}
