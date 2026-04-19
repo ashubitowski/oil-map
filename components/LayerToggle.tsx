@@ -6,9 +6,9 @@ import WellStatusFilter from "./WellStatusFilter";
 
 const LAYERS: { id: LayerId; label: string; color: string }[] = [
   { id: "plays", label: "Shale Plays", color: "bg-amber-500" },
-  { id: "wells", label: "Wells + Depth", color: "bg-blue-500" },
   { id: "probability", label: "Oil Probability", color: "bg-green-500" },
   { id: "production", label: "Production", color: "bg-red-500" },
+  { id: "wells", label: "Wells + Depth", color: "bg-blue-500" },
 ];
 
 interface Props {
