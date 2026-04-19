@@ -42,7 +42,7 @@ export default function ProductionPopup({ basin, history, selectedMonth, onClose
   const refEntry = history?.find((e) => e.month === activeMonth);
 
   return (
-    <div className="absolute top-20 left-4 z-10 bg-gray-900/95 border border-gray-700 rounded-lg p-4 min-w-[220px]">
+    <div className="absolute top-20 left-4 z-20 bg-gray-900/95 border border-gray-700 rounded-lg p-4 min-w-[220px]">
       <div className="flex justify-between items-start mb-3">
         <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Production</p>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-sm leading-none">✕</button>
