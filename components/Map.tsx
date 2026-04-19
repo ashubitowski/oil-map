@@ -85,6 +85,7 @@ export default function Map() {
   const stateStatusRef = useRef<Record<string, "idle" | "loading" | "loaded">>({});
   const overviewColsRef = useRef<WellColumns | null>(null);
   const overviewStatusRef = useRef<"idle" | "loading" | "loaded">("idle");
+  const overviewAttrsRef = useRef<{ cols: WellColumns; positions: Float32Array; fillColors: Uint8Array } | null>(null);
   const [loadingStates, setLoadingStates] = useState<string[]>([]);
   const [mapZoom, setMapZoom] = useState<number>(4);
 
@@ -338,8 +339,15 @@ export default function Map() {
         const deckLayers = [];
 
         if (overviewCols && overviewCols.count > 0) {
-          const oPositions  = buildPositions(overviewCols);
-          const oFillColors = buildFillColors(overviewCols);
+          if (overviewAttrsRef.current?.cols !== overviewCols) {
+            overviewAttrsRef.current = {
+              cols: overviewCols,
+              positions:  buildPositions(overviewCols),
+              fillColors: buildFillColors(overviewCols),
+            };
+          }
+          const oPositions  = overviewAttrsRef.current.positions;
+          const oFillColors = overviewAttrsRef.current.fillColors;
           deckLayers.push(
             new ScatterplotLayer({
               id: "wells-2d-overview",
@@ -386,7 +394,7 @@ export default function Map() {
             aggregateCounts[s as WellStatus] = (aggregateCounts[s as WellStatus] ?? 0) + n;
           }
 
-          deckLayers.push(
+          if (detailOpacity > 0) deckLayers.push(
             new ScatterplotLayer({
               id: `wells-2d-real-${key}`,
               data: { length: cols.count, attributes: {
