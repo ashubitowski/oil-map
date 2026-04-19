@@ -78,7 +78,10 @@ export default function Map() {
   const manifestRef = useRef<WellManifest | null>(null);
   const perStateColsRef = useRef<Record<string, WellColumns>>({});
   const stateStatusRef = useRef<Record<string, "idle" | "loading" | "loaded">>({});
+  const overviewColsRef = useRef<WellColumns | null>(null);
+  const overviewStatusRef = useRef<"idle" | "loading" | "loaded">("idle");
   const [loadingStates, setLoadingStates] = useState<string[]>([]);
+  const [mapZoom, setMapZoom] = useState<number>(4);
 
   const { syncLayers, syncViewport, syncSelection, syncMonth } = useUrlSync();
   const syncViewportRef = useRef(syncViewport);
@@ -159,6 +162,8 @@ export default function Map() {
         const c = map.getCenter();
         syncViewportRef.current({ lng: c.lng, lat: c.lat, zoom: map.getZoom() });
       });
+
+      map.on("zoomend", () => setMapZoom(map.getZoom()));
     });
 
     return () => {
@@ -252,7 +257,9 @@ export default function Map() {
       return;
     }
 
-    const renderWells = async (cols: WellColumns | null, syntheticWells: Well[]) => {
+    const OVERVIEW_MAX_ZOOM = 6;
+
+    const renderWells = async (cols: WellColumns | null, syntheticWells: Well[], overviewCols: WellColumns | null) => {
       if (!overlayRef.current) return;
       const { ScatterplotLayer, ColumnLayer } = await import("@deck.gl/layers");
 
@@ -281,7 +288,33 @@ export default function Map() {
           map.easeTo({ pitch: 45 });
         }
       } else {
+        const zoom = mapRef.current?.getZoom() ?? OVERVIEW_MAX_ZOOM;
+        // t=0 at zoom 5.5, t=1 at zoom 6.5 — crossfade window of 1°
+        const t = Math.max(0, Math.min(1, zoom - 5.5));
+        const overviewOpacity = (1 - t) * 0.85;
+        const detailOpacity   = t * 0.75;
+
         const deckLayers = [];
+
+        if (overviewCols && overviewCols.count > 0) {
+          const oPositions  = buildPositions(overviewCols);
+          const oFillColors = buildFillColors(overviewCols);
+          deckLayers.push(
+            new ScatterplotLayer({
+              id: "wells-2d-overview",
+              data: { length: overviewCols.count, attributes: {
+                getPosition:  { value: oPositions,  size: 2 },
+                getFillColor: { value: oFillColors, size: 4, normalized: true },
+              }},
+              radiusUnits: "pixels",
+              getRadius: 4,
+              opacity: overviewOpacity,
+              transitions: { opacity: 400 },
+              pickable: false,
+              stroked: false,
+            })
+          );
+        }
 
         if (cols && cols.count > 0) {
           const positions  = buildPositions(cols);
@@ -300,7 +333,8 @@ export default function Map() {
               }},
               radiusUnits: "pixels",
               getRadius: 3,
-              opacity: 0.75,
+              opacity: detailOpacity,
+              transitions: { opacity: 400 },
               pickable: true,
               stroked: true,
               lineWidthUnits: "pixels",
@@ -327,7 +361,8 @@ export default function Map() {
               getFillColor: (d: Well) => depthToColor(d.depth_ft),
               radiusUnits: "pixels",
               getRadius: 3,
-              opacity: 0.75,
+              opacity: detailOpacity,
+              transitions: { opacity: 400 },
               pickable: true,
               stroked: true,
               lineWidthUnits: "pixels",
@@ -362,7 +397,7 @@ export default function Map() {
       wellColumnsRef.current = loaded.length === 0 ? null
         : loaded.length === 1 ? loaded[0]
         : mergeBinaryColumns(loaded);
-      renderWells(wellColumnsRef.current, wellsDataRef.current).catch(console.error);
+      renderWells(wellColumnsRef.current, wellsDataRef.current, overviewColsRef.current).catch(console.error);
     };
 
     // Start loading any manifest states whose bbox intersects the current viewport
@@ -441,6 +476,22 @@ export default function Map() {
         }
       }
 
+      // Load overview once (fire-and-forget — don't block viewport check)
+      if (overviewStatusRef.current === "idle") {
+        overviewStatusRef.current = "loading";
+        loadBin("/data/wells-overview.bin")
+          .then(decodeWellsBin)
+          .then((cols) => {
+            overviewColsRef.current = cols;
+            overviewStatusRef.current = "loaded";
+            rebuildAndRender();
+          })
+          .catch((err) => {
+            overviewStatusRef.current = "idle";
+            console.warn("[wells] overview load failed:", err);
+          });
+      }
+
       checkViewport();
     };
 
@@ -449,12 +500,15 @@ export default function Map() {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(checkViewport, 250);
     };
+    const onZoomEnd = () => rebuildAndRender();
     map.on("moveend", onMoveEnd);
+    map.on("zoomend", onZoomEnd);
 
     bootstrap().catch((err) => { console.error("[wells] bootstrap error:", err); reportLoadError("wells", err); });
 
     return () => {
       map.off("moveend", onMoveEnd);
+      map.off("zoomend", onZoomEnd);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [layers.wells, layers.wells3d, mapReady]);
@@ -703,7 +757,7 @@ export default function Map() {
       {mapReady && (
         <>
           <LayerToggle layers={layers} onToggle={toggleLayer} />
-          <Legend layers={layers} selectedMonth={selectedMonth || undefined} hasOffshore={hasOffshore} />
+          <Legend layers={layers} selectedMonth={selectedMonth || undefined} hasOffshore={hasOffshore} isOverview={layers.wells && mapZoom < 6} />
           <LoadBanner errors={loadErrors} loading={loadingStates} />
           {selectedWell && (
             <WellPopup

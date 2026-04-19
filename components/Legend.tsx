@@ -6,9 +6,10 @@ interface Props {
   layers: LayerState;
   selectedMonth?: string;
   hasOffshore?: boolean;
+  isOverview?: boolean;
 }
 
-export default function Legend({ layers, selectedMonth, hasOffshore }: Props) {
+export default function Legend({ layers, selectedMonth, hasOffshore, isOverview }: Props) {
   const visible = layers.plays || layers.probability || layers.production || layers.wells;
   if (!visible) return null;
 
@@ -47,6 +48,9 @@ export default function Legend({ layers, selectedMonth, hasOffshore }: Props) {
           <div className="flex justify-between text-xs text-gray-500 mt-0.5">
             <span>Shallow</span><span>Deep</span>
           </div>
+          {isOverview && (
+            <p className="text-xs text-gray-500 mt-1">Overview · zoom in for all wells</p>
+          )}
           {hasOffshore && (
             <div className="flex items-center gap-1.5 mt-1.5">
               <span className="inline-block w-3 h-3 rounded-full border border-cyan-400 bg-transparent" />
