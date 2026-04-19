@@ -43,5 +43,8 @@ next-env.d.ts
 # raw source data (large binary files — run scripts/ to regenerate)
 /data/raw/
 
+# per-state well JSON files (large, redundant — .bin is what the frontend uses)
+public/data/wells-??.json
+
 # playwright session state
 scripts/.rrc-state.json
