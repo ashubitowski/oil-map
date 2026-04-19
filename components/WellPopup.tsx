@@ -22,7 +22,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function WellPopup({ well, onClose }: Props) {
   return (
-    <div className="absolute top-20 left-4 z-10 bg-gray-900/95 border border-gray-700 rounded-lg p-4 min-w-[220px]">
+    <div className="absolute top-20 left-4 z-20 bg-gray-900/95 border border-gray-700 rounded-lg p-4 min-w-[220px]">
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2">
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Well</p>
