@@ -21,6 +21,8 @@ from scripts.wells.states.ut import adapter as ut_adapter
 from scripts.wells.states.oh import adapter as oh_adapter
 from scripts.wells.states.wv import adapter as wv_adapter
 from scripts.wells.states.la import adapter as la_adapter
+from scripts.wells.states.il import adapter as il_adapter
+from scripts.wells.states.mi import adapter as mi_adapter
 
 REGISTRY: dict = {
     "ND": nd_adapter,
@@ -38,4 +40,6 @@ REGISTRY: dict = {
     "OH": oh_adapter,
     "WV": wv_adapter,
     "LA": la_adapter,
+    "IL": il_adapter,
+    "MI": mi_adapter,
 }
