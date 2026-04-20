@@ -73,6 +73,7 @@ _EXCLUDE_TYPES = frozenset({
 _config = BaseConfig(
     state="RI",
     source_label="ri-dem",
+    category="water-other",
     url=_SHAPEFILE_URL,
     bounds=(41.1, 42.0, -71.9, -71.1),
     output=Path("public/data/wells-ri.json"),

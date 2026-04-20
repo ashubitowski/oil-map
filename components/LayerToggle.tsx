@@ -78,6 +78,17 @@ export default function LayerToggle({ layers, onToggle, enabledStatuses, statusC
                   <span className="w-2 h-2 rounded-sm flex-shrink-0 bg-blue-400 border border-blue-300" />
                   <span className="text-gray-400">3D depth columns</span>
                 </button>
+                <button
+                  onClick={() => onToggle("waterWells")}
+                  aria-label={`${layers.waterWells ? "Hide" : "Show"} water & monitoring wells`}
+                  aria-pressed={layers.waterWells}
+                  className={`flex items-center gap-1.5 w-full text-[11px] text-left mt-1 pl-4 transition-opacity ${
+                    layers.waterWells ? "opacity-100" : "opacity-40"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-sm flex-shrink-0 bg-cyan-400 border border-cyan-300" />
+                  <span className="text-gray-400">Water & monitoring</span>
+                </button>
                 {enabledStatuses && onStatusToggle && onStatusReset && (
                   <WellStatusFilter
                     enabledStatuses={enabledStatuses}

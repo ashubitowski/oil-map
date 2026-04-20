@@ -77,6 +77,7 @@ _PAGE_SIZE = 2000
 _config = BaseConfig(
     state="WI",
     source_label="wi-dnr",
+    category="water-other",
     url=_WGNHS_URL,
     bounds=(42.5, 47.1, -92.9, -86.2),
     output=Path("public/data/wells-wi.json"),

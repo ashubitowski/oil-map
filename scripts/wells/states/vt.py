@@ -45,6 +45,7 @@ _PAGE_SIZE = 2000
 _config = BaseConfig(
     state="VT",
     source_label="vt-vgs",
+    category="water-other",
     url=_BASE_URL,
     bounds=(42.7, 45.0, -73.4, -71.5),
     output=Path("public/data/wells-vt.json"),

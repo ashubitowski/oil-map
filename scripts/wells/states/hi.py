@@ -62,6 +62,7 @@ _COUNTY_MAP = {
 _config = BaseConfig(
     state="HI",
     source_label="hi-dlnr",
+    category="water-other",
     url=_NWIS_URL,
     bounds=(18.9, 22.2, -160.2, -154.8),
     output=Path("public/data/wells-hi.json"),

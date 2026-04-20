@@ -80,6 +80,7 @@ _STATUS_MAP = {
 _config = BaseConfig(
     state="DE",
     source_label="de-dnrec",
+    category="water-other",
     url=_SERVICE,
     bounds=(38.4, 39.9, -75.8, -75.0),
     output=Path("public/data/wells-de.json"),

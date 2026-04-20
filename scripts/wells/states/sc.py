@@ -93,6 +93,7 @@ _WELL_TYPE_MAP: dict[str, str] = {
 _config = BaseConfig(
     state="SC",
     source_label="sc-dnr",
+    category="water-other",
     url=_URL,
     bounds=(32.0, 35.2, -83.4, -78.5),
     output=Path("public/data/wells-sc.json"),

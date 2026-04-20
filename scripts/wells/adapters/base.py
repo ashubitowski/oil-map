@@ -25,6 +25,7 @@ class BaseConfig:
     raw_filename: str = ""            # override saved filename (default: last segment of URL)
     require_depth: bool = True        # set False for sources that lack depth data
     min_depth_ft: int = 0            # drop wells shallower than this (0 = no filter)
+    category: str = "oil-gas"        # "oil-gas" or "water-other" — written to manifest
     status_map: dict = field(default_factory=dict)
     well_type_map: dict = field(default_factory=dict)
     field_map: dict = field(default_factory=dict)  # canonical -> [source names]
@@ -141,7 +142,7 @@ class Adapter(ABC):
             bin_path = cfg.output.with_suffix(".bin")
             write_wells_bin(wells, bin_path)
             write_meta(cfg.state, cfg.source_label, cfg.url, len(wells), cfg.output)
-            update_manifest(cfg.state, bin_path.name, cfg.bounds, len(wells))
+            update_manifest(cfg.state, bin_path.name, cfg.bounds, len(wells), cfg.category)
             print(f"  Wrote → {cfg.output} + {bin_path}")
 
         return wells

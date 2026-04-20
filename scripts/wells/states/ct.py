@@ -68,6 +68,7 @@ _WELL_TYPE_MAP = {
 _config = BaseConfig(
     state="CT",
     source_label="ct-deep",
+    category="water-other",
     url=_BASE_URL,
     bounds=(40.9, 42.1, -73.7, -71.8),
     output=Path("public/data/wells-ct.json"),

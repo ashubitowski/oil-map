@@ -39,6 +39,7 @@ _PAGE_SIZE = 1000
 _config = BaseConfig(
     state="MA",
     source_label="ma-mgs",
+    category="water-other",
     url=_SVC_URL,
     bounds=(41.2, 42.9, -73.5, -69.9),
     output=Path("public/data/wells-ma.json"),

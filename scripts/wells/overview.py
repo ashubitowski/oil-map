@@ -70,7 +70,21 @@ def _read_bin(path: Path) -> list[dict]:
 
 
 def main() -> None:
-    bin_files = sorted(f for f in DATA_DIR.glob("wells-*.bin") if "overview" not in f.name)
+    # Build a set of states tagged category=water-other so they're excluded from
+    # the overview (water wells should not appear in the default country-level view)
+    manifest_path = DATA_DIR / "wells-manifest.json"
+    water_states: set[str] = set()
+    if manifest_path.exists():
+        with open(manifest_path) as f:
+            mdata = json.load(f)
+        water_states = {k for k, v in mdata.get("states", {}).items() if v.get("category") == "water-other"}
+        if water_states:
+            print(f"Excluding water-other states from overview: {sorted(water_states)}")
+
+    bin_files = sorted(
+        f for f in DATA_DIR.glob("wells-*.bin")
+        if "overview" not in f.name and f.stem.replace("wells-", "").upper() not in water_states
+    )
     if not bin_files:
         print(f"No wells-*.bin files found in {DATA_DIR}")
         sys.exit(1)

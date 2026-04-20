@@ -92,7 +92,7 @@ def write_wells(wells: list, path: Path) -> None:
         json.dump(wells, f)
 
 
-def update_manifest(state: str, filename: str, bounds: tuple, count: int) -> None:
+def update_manifest(state: str, filename: str, bounds: tuple, count: int, category: str = "oil-gas") -> None:
     """Read-modify-write one state entry in wells-manifest.json."""
     s, n, w, e = bounds
     bbox = [w, s, e, n]  # GeoJSON-style [minLon, minLat, maxLon, maxLat]
@@ -103,7 +103,10 @@ def update_manifest(state: str, filename: str, bounds: tuple, count: int) -> Non
     else:
         manifest = {"version": 1, "states": {}}
 
-    manifest["states"][state] = {"file": filename, "bbox": bbox, "count": count}
+    entry: dict = {"file": filename, "bbox": bbox, "count": count}
+    if category != "oil-gas":
+        entry["category"] = category
+    manifest["states"][state] = entry
 
     with open(MANIFEST_PATH, "w") as f:
         json.dump(manifest, f, indent=2)

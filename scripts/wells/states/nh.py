@@ -38,6 +38,7 @@ _PAGE_SIZE = 2000
 _config = BaseConfig(
     state="NH",
     source_label="nh-granit",
+    category="water-other",
     url=_SVC_URL,
     bounds=(42.7, 45.3, -72.6, -70.6),
     output=Path("public/data/wells-nh.json"),

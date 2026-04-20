@@ -21,7 +21,7 @@ export interface ParsedUrlState {
   month?: string;
 }
 
-const LAYER_KEYS: Array<keyof LayerState> = ["plays", "wells", "probability", "production", "wells3d"];
+const LAYER_KEYS: Array<keyof LayerState> = ["plays", "wells", "probability", "production", "wells3d", "waterWells"];
 
 function serializeLayers(layers: LayerState): string {
   return LAYER_KEYS.map((k) => (layers[k] ? "1" : "0")).join("");

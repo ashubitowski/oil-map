@@ -67,6 +67,9 @@ export default function Legend({ layers, selectedMonth, hasOffshore, isOverview,
           {layers.wells3d && (
             <p className="text-xs text-gray-600 mt-1">3D columns enabled</p>
           )}
+          {layers.waterWells && (
+            <p className="text-xs text-gray-600 mt-1">Incl. water & monitoring wells (CT, DE, HI, MA, ME, NH, RI, SC, VT, WI)</p>
+          )}
         </div>
       )}
       {layers.production && (

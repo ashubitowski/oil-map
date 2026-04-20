@@ -112,6 +112,7 @@ export default function Map() {
       probability: url.probability ?? false,
       production: url.production ?? false,
       wells3d: url.wells3d ?? false,
+      waterWells: url.waterWells ?? false,
     };
   });
   const [selectedWell, setSelectedWell] = useState<Well | null>(null);
@@ -484,6 +485,7 @@ export default function Map() {
       let startedAny = false;
       for (const [key, entry] of Object.entries(manifestRef.current.states)) {
         if (stateStatusRef.current[key] !== "idle") continue;
+        if (entry.category === "water-other" && !layers.waterWells) continue;
         const [minLon, minLat, maxLon, maxLat] = entry.bbox;
         if (sw.lng >= maxLon || ne.lng <= minLon || sw.lat >= maxLat || ne.lat <= minLat) continue;
 
@@ -552,10 +554,24 @@ export default function Map() {
       if (evictedAny) rebuildAndRender();
     };
 
+    // When waterWells is toggled off, immediately evict any loaded water-other states
+    if (!layers.waterWells && manifestRef.current) {
+      let evicted = false;
+      for (const [key, entry] of Object.entries(manifestRef.current.states)) {
+        if (entry.category === "water-other" && stateStatusRef.current[key] === "loaded") {
+          delete perStateColsRef.current[key];
+          delete perStateAttrsRef.current[key];
+          stateStatusRef.current[key] = "idle";
+          evicted = true;
+        }
+      }
+      if (evicted) rebuildAndRender();
+    }
+
     // Load manifest + synthetic wells once, then check viewport
     const bootstrap = async () => {
       if (!manifestRef.current) {
-        const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json?v=9");
+        const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json?v=10");
         manifestRef.current = manifest;
         for (const key of Object.keys(manifest.states)) {
           if (!(key in stateStatusRef.current)) stateStatusRef.current[key] = "idle";
@@ -582,7 +598,7 @@ export default function Map() {
       // Load overview once (fire-and-forget — don't block viewport check)
       if (overviewStatusRef.current === "idle") {
         overviewStatusRef.current = "loading";
-        loadBin("/data/wells-overview.bin?v=9")
+        loadBin("/data/wells-overview.bin?v=10")
           .then((buf) => decodeWellsBin(buf))
           .then((cols) => {
             overviewColsRef.current = cols;
@@ -617,7 +633,7 @@ export default function Map() {
       map.off("zoomend", onZoomEnd);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [layers.wells, layers.wells3d, mapReady]);
+  }, [layers.wells, layers.wells3d, layers.waterWells, mapReady]);
 
   // Probability layer
   useEffect(() => {

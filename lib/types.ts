@@ -41,6 +41,7 @@ export interface WellManifestEntry {
   file: string;
   bbox: [number, number, number, number]; // [minLon, minLat, maxLon, maxLat]
   count: number;
+  category?: "oil-gas" | "water-other"; // omitted = oil-gas
 }
 
 export interface WellManifest {
@@ -51,7 +52,7 @@ export interface WellManifest {
 export type WellStatus = "Active" | "Inactive" | "Plugged & Abandoned" | "Permitted" | "Unknown";
 export const WELL_STATUSES: WellStatus[] = ["Active", "Inactive", "Plugged & Abandoned", "Permitted", "Unknown"];
 
-export type LayerId = "plays" | "wells" | "probability" | "production" | "wells3d";
+export type LayerId = "plays" | "wells" | "probability" | "production" | "wells3d" | "waterWells";
 
 export interface LayerState {
   plays: boolean;
@@ -59,6 +60,7 @@ export interface LayerState {
   probability: boolean;
   production: boolean;
   wells3d: boolean;
+  waterWells: boolean;
 }
 
 export interface ProductionHistoryEntry {
