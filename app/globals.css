@@ -30,6 +30,10 @@ body {
   z-index: 30;
 }
 
+.maplibregl-canvas-container {
+  z-index: 1;
+}
+
 .maplibregl-ctrl-top-left,
 .maplibregl-ctrl-top-right,
 .maplibregl-ctrl-bottom-left,
