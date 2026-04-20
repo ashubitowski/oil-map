@@ -32,7 +32,10 @@ export async function loadJSON<T>(path: string): Promise<T> {
 
 /** Fetch a bin file, trying `.gz` first (decompressed on caller's side). */
 export async function loadBin(path: string): Promise<ArrayBuffer> {
-  const gzRes = await fetch(resolveDataPath(path) + ".gz");
+  // Insert .gz before any query string so cache-busting params don't corrupt the extension
+  const [base, qs] = path.split("?");
+  const gzPath = base + ".gz" + (qs ? "?" + qs : "");
+  const gzRes = await fetch(resolveDataPath(gzPath));
   if (gzRes.ok) {
     const compressed = await gzRes.arrayBuffer();
     return new Response(
