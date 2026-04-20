@@ -30,17 +30,19 @@ body {
   z-index: 30;
 }
 
-/* deck.gl MapboxOverlay is placed inside ctrl-top-right as a control.
-   Its canvas expands to cover the full map. Keep ctrl-top-right lower
-   so the real UI controls in the other corners render above it. */
-.maplibregl-ctrl-top-right {
-  z-index: 25;
+/* Isolate the map's stacking context so internal z-indices (ctrl corners,
+   deck.gl canvas) don't compete with React overlays outside the map. */
+.maplibregl-map {
+  isolation: isolate;
 }
 
-.maplibregl-ctrl-top-left,
-.maplibregl-ctrl-bottom-left,
-.maplibregl-ctrl-bottom-right {
-  z-index: 35;
+/* deck.gl MapboxOverlay lands in ctrl-top-left (its getDefaultPosition).
+   Its container is position:absolute; NavigationControl is position:static/float.
+   Positioned siblings paint over static ones at equal z-index, so without
+   this rule the zoom buttons are hidden. Making them positioned at z:2 wins. */
+.maplibregl-ctrl-top-left > .maplibregl-ctrl {
+  position: relative;
+  z-index: 2;
 }
 
 .maplibregl-popup-content {
