@@ -108,7 +108,7 @@ export default function Map() {
     const url = typeof window !== "undefined" ? readUrlState().layers : {};
     return {
       plays: url.plays ?? true,
-      wells: url.wells ?? false,
+      wells: url.wells ?? true,
       probability: url.probability ?? false,
       production: url.production ?? false,
       wells3d: url.wells3d ?? false,
