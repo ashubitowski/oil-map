@@ -34,6 +34,10 @@ from scripts.wells.states.ne import adapter as ne_adapter
 from scripts.wells.states.fl import adapter as fl_adapter
 from scripts.wells.states.va import adapter as va_adapter
 from scripts.wells.states.in_ import adapter as in_adapter
+from scripts.wells.states.nv import adapter as nv_adapter
+from scripts.wells.states.sd import adapter as sd_adapter
+from scripts.wells.states.md import adapter as md_adapter
+from scripts.wells.states.id_ import adapter as id_adapter
 
 REGISTRY: dict = {
     "ND": nd_adapter,
@@ -64,4 +68,8 @@ REGISTRY: dict = {
     "FL": fl_adapter,
     "VA": va_adapter,
     "IN": in_adapter,
+    "NV": nv_adapter,
+    "SD": sd_adapter,
+    "MD": md_adapter,
+    "ID": id_adapter,
 }
