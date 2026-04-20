@@ -582,7 +582,7 @@ export default function Map() {
       // Load overview once (fire-and-forget — don't block viewport check)
       if (overviewStatusRef.current === "idle") {
         overviewStatusRef.current = "loading";
-        loadBin("/data/wells-overview.bin")
+        loadBin("/data/wells-overview.bin?v=2")
           .then((buf) => decodeWellsBin(buf))
           .then((cols) => {
             overviewColsRef.current = cols;
