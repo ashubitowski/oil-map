@@ -356,7 +356,7 @@ export default function Map() {
                 getFillColor: { value: oFillColors, size: 4, normalized: true },
               }},
               radiusUnits: "pixels",
-              getRadius: 6,
+              getRadius: 4.5,
               opacity: overviewOpacity,
               transitions: { opacity: 400 },
               pickable: false,
