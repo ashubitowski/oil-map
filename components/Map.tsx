@@ -555,7 +555,7 @@ export default function Map() {
     // Load manifest + synthetic wells once, then check viewport
     const bootstrap = async () => {
       if (!manifestRef.current) {
-        const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json");
+        const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json?v=2");
         manifestRef.current = manifest;
         for (const key of Object.keys(manifest.states)) {
           if (!(key in stateStatusRef.current)) stateStatusRef.current[key] = "idle";
