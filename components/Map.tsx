@@ -555,7 +555,7 @@ export default function Map() {
     // Load manifest + synthetic wells once, then check viewport
     const bootstrap = async () => {
       if (!manifestRef.current) {
-        const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json?v=7");
+        const manifest = await loadJSON<WellManifest>("/data/wells-manifest.json?v=8");
         manifestRef.current = manifest;
         for (const key of Object.keys(manifest.states)) {
           if (!(key in stateStatusRef.current)) stateStatusRef.current[key] = "idle";
@@ -582,7 +582,7 @@ export default function Map() {
       // Load overview once (fire-and-forget — don't block viewport check)
       if (overviewStatusRef.current === "idle") {
         overviewStatusRef.current = "loading";
-        loadBin("/data/wells-overview.bin?v=7")
+        loadBin("/data/wells-overview.bin?v=8")
           .then((buf) => decodeWellsBin(buf))
           .then((cols) => {
             overviewColsRef.current = cols;

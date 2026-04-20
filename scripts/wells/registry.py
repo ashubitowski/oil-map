@@ -45,6 +45,16 @@ from scripts.wells.states.mo import adapter as mo_adapter
 from scripts.wells.states.wa import adapter as wa_adapter
 from scripts.wells.states.nc import adapter as nc_adapter
 from scripts.wells.states.nj import adapter as nj_adapter
+from scripts.wells.states.me import adapter as me_adapter
+from scripts.wells.states.nh import adapter as nh_adapter
+from scripts.wells.states.hi import adapter as hi_adapter
+from scripts.wells.states.ri import adapter as ri_adapter
+from scripts.wells.states.ct import adapter as ct_adapter
+from scripts.wells.states.ma import adapter as ma_adapter
+from scripts.wells.states.sc import adapter as sc_adapter
+from scripts.wells.states.vt import adapter as vt_adapter
+from scripts.wells.states.wi import adapter as wi_adapter
+from scripts.wells.states.de import adapter as de_adapter
 
 REGISTRY: dict = {
     "ND": nd_adapter,
@@ -86,4 +96,14 @@ REGISTRY: dict = {
     "WA": wa_adapter,
     "NC": nc_adapter,
     "NJ": nj_adapter,
+    "ME": me_adapter,
+    "NH": nh_adapter,
+    "HI": hi_adapter,
+    "RI": ri_adapter,
+    "CT": ct_adapter,
+    "MA": ma_adapter,
+    "SC": sc_adapter,
+    "VT": vt_adapter,
+    "WI": wi_adapter,
+    "DE": de_adapter,
 }
