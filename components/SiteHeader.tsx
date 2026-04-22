@@ -27,9 +27,6 @@ export default function SiteHeader() {
         <h1 className="text-white font-semibold text-sm tracking-wide leading-none">US Oil Map</h1>
       </a>
 
-      {/* Subtitle */}
-      <span className="text-gray-600 text-xs hidden sm:block">Wells · Plays · Probability · Production</span>
-
       {/* Spacer */}
       <div className="flex-1" />
 
