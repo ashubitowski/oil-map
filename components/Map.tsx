@@ -64,12 +64,14 @@ function depthToColor(depth_ft: number): Color4 {
   return [15, 23, 42, 191];
 }
 
+const COLUMN_MATERIAL = { ambient: 0.3, diffuse: 0.7, shininess: 48, specularColor: [90, 100, 120] as [number, number, number] };
+
 export default function Map() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
   const overlayRef = useRef<{ setProps: (p: { layers: unknown[] }) => void } | null>(null);
-  const prevPitchRef = useRef<number>(0);
-  const pitchAutoSetRef = useRef(false);
+  const prevCameraRef = useRef<{ pitch: number; bearing: number }>({ pitch: 0, bearing: 0 });
+  const cameraAutoSetRef = useRef(false);
   const productionHistoryRef = useRef<ProductionHistory | null>(null);
   const productionBasinsRef = useRef<ProductionBasin[] | null>(null);
   const productionMaxBpdRef = useRef<number>(0);
@@ -85,7 +87,7 @@ export default function Map() {
   const stateStatusRef = useRef<Record<string, "idle" | "loading" | "loaded">>({});
   const overviewColsRef = useRef<WellColumns | null>(null);
   const overviewStatusRef = useRef<"idle" | "loading" | "loaded">("idle");
-  const overviewAttrsRef = useRef<{ cols: WellColumns; positions: Float32Array; fillColors: Uint8Array } | null>(null);
+  const overviewAttrsRef = useRef<{ cols: WellColumns; positions: Float32Array; fillColors: Uint8Array; elevations: Float32Array } | null>(null);
   const [loadingStates, setLoadingStates] = useState<string[]>([]);
   const [mapZoom, setMapZoom] = useState<number>(4);
 
@@ -157,10 +159,29 @@ export default function Map() {
         map.addControl(new maplibre.NavigationControl(), "top-left");
         map.addControl(new maplibre.ScaleControl({ unit: "imperial" }), "bottom-left");
 
+        // Atmospheric sky — invisible at pitch 0, dramatic at high pitch
+        try {
+          (map as unknown as { setSky: (s: object) => void }).setSky({
+            "sky-color": "#0b1220",
+            "horizon-color": "#1a2332",
+            "fog-color": "#0b1220",
+            "horizon-fog-blend": 0.6,
+            "sky-horizon-blend": 0.8,
+          });
+        } catch {}
+
         // Create deck.gl overlay for 3D layers
         try {
-          const { MapboxOverlay } = await import("@deck.gl/mapbox");
-          const overlay = new MapboxOverlay({ layers: [] });
+          const [{ MapboxOverlay }, { LightingEffect, AmbientLight, DirectionalLight }] = await Promise.all([
+            import("@deck.gl/mapbox"),
+            import("@deck.gl/core"),
+          ]);
+          const lightingEffect = new LightingEffect({
+            ambientLight: new AmbientLight({ color: [255, 230, 200], intensity: 0.55 }),
+            sunLight: new DirectionalLight({ color: [255, 220, 180], intensity: 1.6, direction: [-1, -3, -2] }),
+            rimLight: new DirectionalLight({ color: [120, 180, 255], intensity: 0.6, direction: [1, 2, -1] }),
+          });
+          const overlay = new MapboxOverlay({ layers: [], effects: [lightingEffect] });
           map.addControl(overlay as unknown as import("maplibre-gl").IControl);
           overlayRef.current = overlay as unknown as { setProps: (p: { layers: unknown[] }) => void };
         } catch {
@@ -196,11 +217,13 @@ export default function Map() {
             map.addSource("plays", { type: "geojson", data: data as GeoJSON.FeatureCollection });
             map.addLayer({
               id: "plays-fill",
-              type: "fill",
+              type: "fill-extrusion",
               source: "plays",
               paint: {
-                "fill-color": "#f59e0b",
-                "fill-opacity": 0.25,
+                "fill-extrusion-color": "#f59e0b",
+                "fill-extrusion-opacity": 0.28,
+                "fill-extrusion-height": 25000,
+                "fill-extrusion-base": 0,
               },
             });
             map.addLayer({
@@ -261,9 +284,9 @@ export default function Map() {
 
     if (!layers.wells) {
       overlayRef.current?.setProps({ layers: [] });
-      if (pitchAutoSetRef.current) {
-        pitchAutoSetRef.current = false;
-        map.easeTo({ pitch: prevPitchRef.current });
+      if (cameraAutoSetRef.current) {
+        cameraAutoSetRef.current = false;
+        map.flyTo({ pitch: prevCameraRef.current.pitch, bearing: prevCameraRef.current.bearing, duration: 1000 });
       }
       setSelectedWell(null);
       return;
@@ -279,56 +302,106 @@ export default function Map() {
 
       if (layers.wells3d) {
         const deckLayers3d = [];
+        const zoom = mapRef.current?.getZoom() ?? OVERVIEW_MAX_ZOOM;
+        const crossT = Math.max(0, Math.min(1, zoom - 6.5));
+        const overviewOpacity3d = (1 - crossT) * 0.9;
+        const detailOpacity3d = crossT;
 
-        // Per-state ColumnLayers using prebuilt binary attributes — no Well[] materialization
-        for (const [key, cols] of Object.entries(perStateCols)) {
-          const attrs = perStateAttrsRef.current[key];
-          if (!attrs) continue;
+        // Overview ColumnLayer at low zoom — reuses the same overview binary buffer
+        if (overviewCols && overviewCols.count > 0 && overviewOpacity3d > 0) {
+          if (overviewAttrsRef.current?.cols !== overviewCols) {
+            const elevs = new Float32Array(overviewCols.count);
+            for (let i = 0; i < overviewCols.count; i++) elevs[i] = overviewCols.depths[i] / 10;
+            overviewAttrsRef.current = {
+              cols: overviewCols,
+              positions:  buildPositions(overviewCols),
+              fillColors: buildFillColors(overviewCols),
+              elevations: elevs,
+            };
+          }
+          const oAttrs = overviewAttrsRef.current!;
           deckLayers3d.push(
             new ColumnLayer({
-              id: `wells-3d-${key}`,
-              data: { length: cols.count, attributes: {
-                getPosition:  { value: attrs.positions,   size: 2 },
-                getElevation: { value: attrs.elevations,  size: 1 },
-                getFillColor: { value: attrs.depthColors, size: 4, normalized: true },
+              id: "wells-3d-overview",
+              data: { length: overviewCols.count, attributes: {
+                getPosition:  { value: oAttrs.positions,  size: 2 },
+                getElevation: { value: oAttrs.elevations, size: 1 },
+                getFillColor: { value: oAttrs.fillColors, size: 4, normalized: true },
               }},
-              radius: 800,
-              diskResolution: 6,
-              elevationScale: 1,
-              pickable: true,
-              onClick: (info) => {
-                if (info.index >= 0) {
-                  const well = columnsToWell(cols, info.index);
-                  setSelectedWell(well);
-                  syncSelectionRef.current({ type: "well", id: well.id });
-                }
-              },
+              radius: 10000,
+              diskResolution: 8,
+              elevationScale: 150,
+              opacity: overviewOpacity3d,
+              transitions: { opacity: 400 },
+              material: COLUMN_MATERIAL,
+              pickable: false,
             })
           );
         }
 
-        // Synthetic wells still use accessor-based path (small count, not worth binary)
-        if (syntheticWells.length > 0) {
-          deckLayers3d.push(
-            new ColumnLayer({
-              id: "wells-3d-synthetic",
-              data: syntheticWells,
-              getPosition: (d: Well) => [d.lon, d.lat],
-              getElevation: (d: Well) => d.depth_ft / 10,
-              getFillColor: (d: Well) => depthToColor(d.depth_ft),
-              radius: 800,
-              diskResolution: 6,
-              elevationScale: 1,
-              pickable: true,
-            })
-          );
+        // Per-state ColumnLayers — fade in at zoom ≥ 6.5
+        if (detailOpacity3d > 0) {
+          for (const [key, cols] of Object.entries(perStateCols)) {
+            const attrs = perStateAttrsRef.current[key];
+            if (!attrs) continue;
+            deckLayers3d.push(
+              new ColumnLayer({
+                id: `wells-3d-${key}`,
+                data: { length: cols.count, attributes: {
+                  getPosition:  { value: attrs.positions,   size: 2 },
+                  getElevation: { value: attrs.elevations,  size: 1 },
+                  getFillColor: { value: attrs.depthColors, size: 4, normalized: true },
+                }},
+                radius: 800,
+                diskResolution: 8,
+                elevationScale: 1,
+                opacity: detailOpacity3d,
+                transitions: { opacity: 400 },
+                material: COLUMN_MATERIAL,
+                pickable: true,
+                onClick: (info: { index: number }) => {
+                  if (info.index >= 0) {
+                    const well = columnsToWell(cols, info.index);
+                    setSelectedWell(well);
+                    syncSelectionRef.current({ type: "well", id: well.id });
+                  }
+                },
+              })
+            );
+          }
+
+          // Synthetic wells (accessor path — small count)
+          if (syntheticWells.length > 0) {
+            deckLayers3d.push(
+              new ColumnLayer({
+                id: "wells-3d-synthetic",
+                data: syntheticWells,
+                getPosition: (d: Well) => [d.lon, d.lat],
+                getElevation: (d: Well) => d.depth_ft / 10,
+                getFillColor: (d: Well) => depthToColor(d.depth_ft),
+                radius: 800,
+                diskResolution: 8,
+                elevationScale: 1,
+                opacity: detailOpacity3d,
+                transitions: { opacity: 400 },
+                material: COLUMN_MATERIAL,
+                pickable: true,
+              })
+            );
+          }
         }
 
         overlayRef.current.setProps({ layers: deckLayers3d });
-        if (!pitchAutoSetRef.current) {
-          prevPitchRef.current = map.getPitch();
-          pitchAutoSetRef.current = true;
-          map.easeTo({ pitch: 45 });
+        if (!cameraAutoSetRef.current) {
+          prevCameraRef.current = { pitch: map.getPitch(), bearing: map.getBearing() };
+          cameraAutoSetRef.current = true;
+          map.flyTo({
+            pitch: 55,
+            bearing: map.getBearing() + 15,
+            duration: 1800,
+            curve: 1.4,
+            easing: (t: number) => t * (2 - t),
+          });
         }
       } else {
         const zoom = mapRef.current?.getZoom() ?? OVERVIEW_MAX_ZOOM;
@@ -345,10 +418,12 @@ export default function Map() {
               cols: overviewCols,
               positions:  buildPositions(overviewCols),
               fillColors: buildFillColors(overviewCols),
+              elevations: new Float32Array(0),
             };
           }
-          const oPositions  = overviewAttrsRef.current.positions;
-          const oFillColors = overviewAttrsRef.current.fillColors;
+          const oAttrs2d = overviewAttrsRef.current!;
+          const oPositions  = oAttrs2d.positions;
+          const oFillColors = oAttrs2d.fillColors;
           deckLayers.push(
             new ScatterplotLayer({
               id: "wells-2d-overview",
@@ -462,9 +537,9 @@ export default function Map() {
 
         overlayRef.current.setProps({ layers: deckLayers });
 
-        if (pitchAutoSetRef.current) {
-          pitchAutoSetRef.current = false;
-          map.easeTo({ pitch: prevPitchRef.current });
+        if (cameraAutoSetRef.current) {
+          cameraAutoSetRef.current = false;
+          map.flyTo({ pitch: prevCameraRef.current.pitch, bearing: prevCameraRef.current.bearing, duration: 1000 });
         }
       }
     };
@@ -921,6 +996,7 @@ export default function Map() {
             selectedMonth={selectedMonth || undefined}
             hasOffshore={hasOffshore}
             isOverview={layers.wells && mapZoom < 6}
+            isDensityOverview={layers.wells3d && mapZoom < 6.5}
             filteredCount={Object.keys(perStateColsRef.current).length > 0 ? Array.from(enabledStatuses).reduce((s, st) => s + (statusCounts[st] ?? 0), 0) : undefined}
             totalCount={Object.values(statusCounts).reduce((a, b) => a + (b ?? 0), 0) || undefined}
           />

@@ -7,11 +7,12 @@ interface Props {
   selectedMonth?: string;
   hasOffshore?: boolean;
   isOverview?: boolean;
+  isDensityOverview?: boolean;
   filteredCount?: number;
   totalCount?: number;
 }
 
-export default function Legend({ layers, selectedMonth, hasOffshore, isOverview, filteredCount, totalCount }: Props) {
+export default function Legend({ layers, selectedMonth, hasOffshore, isOverview, isDensityOverview, filteredCount, totalCount }: Props) {
   const visible = layers.plays || layers.probability || layers.production || layers.wells;
   if (!visible) return null;
 
@@ -64,7 +65,10 @@ export default function Legend({ layers, selectedMonth, hasOffshore, isOverview,
               <span className="text-xs text-gray-500">Offshore (BOEM)</span>
             </div>
           )}
-          {layers.wells3d && (
+          {layers.wells3d && isDensityOverview && (
+            <p className="text-xs text-gray-500 mt-1">Density view · zoom in for per-well depth</p>
+          )}
+          {layers.wells3d && !isDensityOverview && (
             <p className="text-xs text-gray-600 mt-1">3D columns enabled</p>
           )}
           {layers.waterWells && (
