@@ -1,4 +1,5 @@
 import ShareButton from "./ShareButton";
+import LastUpdated from "./LastUpdated";
 
 export default function SiteHeader() {
   return (
@@ -26,6 +27,8 @@ export default function SiteHeader() {
         </svg>
         <h1 className="text-white font-semibold text-sm tracking-wide leading-none">US Oil Map</h1>
       </a>
+
+      <LastUpdated />
 
       {/* Spacer */}
       <div className="flex-1" />
