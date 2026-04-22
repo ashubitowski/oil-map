@@ -18,7 +18,7 @@ export default function LoadBanner({ errors, loading = [] }: Props) {
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-1.5 items-center">
       {hasLoading && (
-        <div className="bg-gray-900/90 border border-gray-700 rounded-lg px-3 py-1.5 flex items-center gap-2">
+        <div className="bg-gray-950/90 border border-gray-800 rounded-lg px-3 py-1.5 flex items-center gap-2 backdrop-blur-sm shadow-lg">
           <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
           <p className="text-xs text-gray-300">
             Loading wells for {loading.join(", ")}…
@@ -26,7 +26,7 @@ export default function LoadBanner({ errors, loading = [] }: Props) {
         </div>
       )}
       {hasErrors && (
-        <div className="bg-gray-900/95 border border-red-800 rounded-lg px-3 py-2 flex items-start gap-3 max-w-sm">
+        <div className="bg-gray-950/95 border border-red-900/80 rounded-lg px-3 py-2 flex items-start gap-3 max-w-sm backdrop-blur-sm shadow-lg">
           <div className="flex-1 space-y-0.5">
             {entries.map(([layer, msg]) => (
               <p key={layer} className="text-xs text-red-400">

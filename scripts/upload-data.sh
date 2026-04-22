@@ -18,6 +18,8 @@ BUCKET="oil-map-data"
 ENDPOINT="https://${ACCOUNT_ID}.r2.cloudflarestorage.com"
 PROFILE="${AWS_PROFILE:-r2}"
 
+python3 scripts/wells/freshness.py
+
 aws s3 sync public/data/ "s3://${BUCKET}/data/" \
   --endpoint-url "${ENDPOINT}" \
   --profile "${PROFILE}" \

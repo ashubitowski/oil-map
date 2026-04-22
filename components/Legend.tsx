@@ -20,7 +20,7 @@ export default function Legend({ layers, selectedMonth, hasOffshore, isOverview,
     : null;
 
   return (
-    <div className="absolute bottom-8 right-4 z-10 bg-gray-900/90 border border-gray-700 rounded-lg p-3 space-y-3 min-w-[160px] max-w-[200px]">
+    <div className="absolute bottom-8 right-4 z-10 bg-gray-950/90 border border-gray-800 rounded-lg p-3 space-y-3 min-w-[160px] max-w-[200px] backdrop-blur-sm shadow-xl">
       {layers.plays && (
         <div>
           <p className="text-xs text-gray-400 mb-1.5">Shale Plays</p>
