@@ -43,7 +43,7 @@ type Color4 = [number, number, number, number];
 
 function depthToColor(depth_ft: number): Color4 {
   const stops: [number, [number, number, number]][] = [
-    [0, [147, 197, 253]],
+    [0, [0, 220, 255]],
     [5000, [59, 130, 246]],
     [10000, [29, 78, 216]],
     [20000, [15, 23, 42]],

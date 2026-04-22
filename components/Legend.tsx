@@ -46,7 +46,7 @@ export default function Legend({ layers, selectedMonth, hasOffshore, isOverview,
         <div>
           <p className="text-xs text-gray-400 mb-1.5">Well Depth</p>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-24 rounded-sm" style={{ background: "linear-gradient(to right, #93c5fd, #1d4ed8, #0f172a)" }} />
+            <div className="h-2 w-24 rounded-sm" style={{ background: "linear-gradient(to right, #00dcff, #3b82f6, #1d4ed8, #0f172a)" }} />
           </div>
           <div className="flex justify-between text-xs text-gray-500 mt-0.5">
             <span>Shallow</span><span>Deep</span>
