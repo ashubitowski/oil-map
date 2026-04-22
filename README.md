@@ -1,33 +1,39 @@
 # US Oil Map
 
-An interactive map of US oil and gas activity built with Next.js, MapLibre GL, and deck.gl — all public data, no API keys required.
+An interactive map of 4.4 million US oil, gas, and water wells built with Next.js, MapLibre GL, and deck.gl — all public data, no API keys required.
 
-**Live demo:** [oil-map.vercel.app](https://oil-map.vercel.app)
+**Live:** [oil-map.vercel.app](https://oil-map-git-main-andrews-projects-212d71a8.vercel.app)
 
 ## Layers
 
 | Layer | Data Source | Description |
 |---|---|---|
-| Shale Plays | [EIA](https://www.eia.gov/maps/maps.htm) | 50 major shale play polygons with hover labels |
-| Wells + Depth | Synthetic + [ND OGIC](https://www.dmr.nd.gov/oilgas/) + [CO ECMC](https://ecmc.state.co.us) + [TX RRC](https://www.rrc.texas.gov) + [BOEM OCS](https://www.data.boem.gov/Main/Borehole.aspx) | Onshore wells by state (real where available) + Gulf of Mexico offshore wells colored by depth |
+| Wells | 50 state agencies + [BOEM OCS](https://www.data.boem.gov/Main/Borehole.aspx) | 4.4M oil, gas, and water wells colored by depth |
+| Shale Plays | [EIA](https://www.eia.gov/maps/maps.htm) | 50 major play polygons with hover labels; extruded in 3D mode |
 | Oil Probability | [USGS NOGA](https://www.usgs.gov/programs/energy-resources-program/science/national-oil-and-gas-assessment) | 32 assessment unit polygons colored by probability of recoverable oil |
-| Production | [EIA v2 API](https://api.eia.gov/v2/petroleum/crd/drill/data/) | Sized bubbles at 7 major basin centroids, 36-month timeline slider |
+| Production | [EIA v2 API](https://api.eia.gov/v2/petroleum/crd/drill/data/) | Sized bubbles at major basin centroids, 36-month timeline slider |
 
 ## Features
 
-- **Timeline slider** — scrub through 3 years of production history (2021–2024); bubbles resize in real time
+- **4.4M wells across 50 states** — binary format (~30 bytes/well), loaded per-state as you pan
+- **3D depth columns** — toggle 3D for deck.gl ColumnLayer extrusion by true well depth; cinematic flyTo camera, directional lighting with warm sun + cool rim, and specular material on all columns
+- **National density view** — in 3D at low zoom, well density renders as towering columns across the US (deep formations like Permian and Haynesville visibly stand out)
+- **Extruded shale plays** — plays rise as translucent amber 25km slabs alongside the well columns in 3D mode
+- **Depth color ramp** — bright cyan (shallow) → blue → indigo → near-black (deep); wells with no depth data are hidden in 3D but visible in 2D
+- **Timeline slider** — scrub through 3 years of production history; bubbles resize in real time
 - **Sparkline popup** — click any production bubble for a 36-month trend chart
-- **3D well columns** — toggle "3D depth columns" under Wells for deck.gl extrusion by depth
 - **Shareable URLs** — layers, viewport, selected feature, and timeline month all encoded in the URL
 - **Offshore wells** — BOEM Gulf of Mexico OCS wells with water depth in popup (cyan outline)
+- **Water / monitoring well toggle** — 10 states (CT, DE, HI, MA, ME, NH, RI, SC, VT, WI) classified as water-other, off by default
 
 ## Stack
 
 - [Next.js 16](https://nextjs.org/) (App Router, Turbopack)
 - [MapLibre GL JS](https://maplibre.org/) — open-source map renderer, no API key
-- [deck.gl 9](https://deck.gl/) — 3D layer overlay
+- [deck.gl 9](https://deck.gl/) — 3D ColumnLayer overlay with LightingEffect
 - [Recharts](https://recharts.org/) — production trend sparklines
 - [Tailwind CSS 4](https://tailwindcss.com/)
+- [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) — binary well data (zero egress cost)
 
 ## Running locally
 
@@ -38,38 +44,28 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The preprocessed data files are committed to `public/data/` so the app works immediately with no setup.
+Well data is served from Cloudflare R2 via `NEXT_PUBLIC_DATA_BASE_URL`. For local dev without R2 access, place the binary files under `public/data/` (gitignored).
 
-## Regenerating data
+## Data pipeline
 
-Raw source files live in `data/raw/` (gitignored). Scripts output to `public/data/`.
+Python adapters in `scripts/wells/states/` normalize per-state source data into a shared binary format (WELL v2, ~30 bytes/well). Each state adapter outputs a `.bin` file and a `.meta.json` with source URL, fetch date, and well count.
 
 ```bash
-# EIA shale plays (shapefile → GeoJSON)
-# Download EIA shale plays shapefile to data/raw/ first
-python3 scripts/fetch-data.ts
+# Run a specific state adapter (example: Texas via RRC)
+python3 scripts/wells/states/tx.py
 
-# USGS assessment units
-python3 scripts/convert-usgs-au.py
+# Regenerate the manifest + overview after adding states
+python3 scripts/wells/manifest.py
+python3 scripts/wells/overview.py
 
-# Synthetic onshore wells (polygon-constrained with realistic depth profiles)
-npm run generate:wells
+# Regenerate the freshness summary (latest fetch date per state)
+python3 scripts/wells/freshness.py
 
-# EIA production data — requires a free EIA API key (https://www.eia.gov/opendata/)
-EIA_API_KEY=your_key npm run generate:production
-
-# BOEM Gulf of Mexico offshore wells (downloads ~50 MB ZIP from data.boem.gov)
-npm run generate:offshore
-
-# Real North Dakota wells (ND OGIC bulk download)
-npm run generate:wells-nd
-
-# Real Colorado wells (CO ECMC bulk download)
-npm run generate:wells-co
-
-# Real Texas wells via RRC portal (Playwright — opens browser on first run)
-npm run scrape:rrc
+# Upload all data files to R2
+sh scripts/upload-data.sh
 ```
+
+Built by [Shuby](https://github.com/ashubitowski).
 
 ## License
 
