@@ -73,7 +73,7 @@ export default function SiteHeader() {
           rel="noopener noreferrer"
           className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-md text-gray-600 hover:text-gray-400 border border-transparent transition-colors text-xs"
         >
-          Built by Andrew
+          Built by Shuby
         </a>
       </div>
     </header>

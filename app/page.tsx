@@ -1,6 +1,5 @@
 import MapWrapper from "@/components/MapWrapper";
 import SiteHeader from "@/components/SiteHeader";
-import Attribution from "@/components/Attribution";
 
 export default function Home() {
   return (
@@ -8,7 +7,6 @@ export default function Home() {
       <SiteHeader />
       <div className="flex-1 relative min-h-0">
         <MapWrapper />
-        <Attribution />
       </div>
     </main>
   );
