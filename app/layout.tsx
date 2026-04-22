@@ -18,7 +18,7 @@ const BASE_URL = "https://oil-map-git-main-andrews-projects-212d71a8.vercel.app"
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "US Oil Map — 4.4M wells across 50 states",
+    default: "US Oil Map",
     template: "%s · US Oil Map",
   },
   description:
