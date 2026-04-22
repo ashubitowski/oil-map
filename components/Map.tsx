@@ -107,7 +107,7 @@ export default function Map() {
   const [layers, setLayers] = useState<LayerState>(() => {
     const url = typeof window !== "undefined" ? readUrlState().layers : {};
     return {
-      plays: url.plays ?? true,
+      plays: url.plays ?? false,
       wells: url.wells ?? true,
       probability: url.probability ?? false,
       production: url.production ?? false,
