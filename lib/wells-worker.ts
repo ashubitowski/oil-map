@@ -37,14 +37,18 @@ function depthToColorRGBA(depth_ft: number): [number, number, number, number] {
 
 function buildElevations(depths: Int32Array): Float32Array {
   const out = new Float32Array(depths.length);
-  for (let i = 0; i < depths.length; i++) out[i] = depths[i] / 10;
+  for (let i = 0; i < depths.length; i++) out[i] = depths[i] > 0 ? depths[i] / 10 : 80;
   return out;
 }
 
 function buildDepthColors(depths: Int32Array): Uint8Array {
   const out = new Uint8Array(depths.length * 4);
   for (let i = 0; i < depths.length; i++) {
-    if (depths[i] === 0) continue; // alpha stays 0 — hidden in 3D, visible in 2D
+    if (depths[i] === 0) {
+      // No depth data — short gray stub so the well is visible but clearly undifferentiated
+      out[i * 4] = 90; out[i * 4 + 1] = 100; out[i * 4 + 2] = 115; out[i * 4 + 3] = 140;
+      continue;
+    }
     const [r, g, b, a] = depthToColorRGBA(depths[i]);
     out[i * 4]     = r;
     out[i * 4 + 1] = g;
