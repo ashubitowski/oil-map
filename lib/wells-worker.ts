@@ -44,6 +44,7 @@ function buildElevations(depths: Int32Array): Float32Array {
 function buildDepthColors(depths: Int32Array): Uint8Array {
   const out = new Uint8Array(depths.length * 4);
   for (let i = 0; i < depths.length; i++) {
+    if (depths[i] === 0) continue; // alpha stays 0 — hidden in 3D, visible in 2D
     const [r, g, b, a] = depthToColorRGBA(depths[i]);
     out[i * 4]     = r;
     out[i * 4 + 1] = g;

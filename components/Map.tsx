@@ -311,7 +311,7 @@ export default function Map() {
         if (overviewCols && overviewCols.count > 0 && overviewOpacity3d > 0) {
           if (overviewAttrsRef.current?.cols !== overviewCols) {
             const elevs = new Float32Array(overviewCols.count);
-            for (let i = 0; i < overviewCols.count; i++) elevs[i] = overviewCols.depths[i] / 10;
+            for (let i = 0; i < overviewCols.count; i++) elevs[i] = overviewCols.depths[i] > 0 ? overviewCols.depths[i] / 10 : 50;
             overviewAttrsRef.current = {
               cols: overviewCols,
               positions:  buildPositions(overviewCols),
