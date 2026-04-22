@@ -70,7 +70,7 @@ export default function Map() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
   const overlayRef = useRef<{ setProps: (p: { layers: unknown[] }) => void } | null>(null);
-  const prevCameraRef = useRef<{ pitch: number; bearing: number }>({ pitch: 0, bearing: 0 });
+  const prevCameraRef = useRef<{ pitch: number }>({ pitch: 0 });
   const cameraAutoSetRef = useRef(false);
   const productionHistoryRef = useRef<ProductionHistory | null>(null);
   const productionBasinsRef = useRef<ProductionBasin[] | null>(null);
@@ -286,7 +286,7 @@ export default function Map() {
       overlayRef.current?.setProps({ layers: [] });
       if (cameraAutoSetRef.current) {
         cameraAutoSetRef.current = false;
-        map.flyTo({ pitch: prevCameraRef.current.pitch, bearing: prevCameraRef.current.bearing, duration: 1000 });
+        map.flyTo({ pitch: prevCameraRef.current.pitch, duration: 1000 });
       }
       setSelectedWell(null);
       return;
@@ -393,11 +393,10 @@ export default function Map() {
 
         overlayRef.current.setProps({ layers: deckLayers3d });
         if (!cameraAutoSetRef.current) {
-          prevCameraRef.current = { pitch: map.getPitch(), bearing: map.getBearing() };
+          prevCameraRef.current = { pitch: map.getPitch() };
           cameraAutoSetRef.current = true;
           map.flyTo({
             pitch: 55,
-            bearing: map.getBearing() + 15,
             duration: 1800,
             curve: 1.4,
             easing: (t: number) => t * (2 - t),
@@ -539,7 +538,7 @@ export default function Map() {
 
         if (cameraAutoSetRef.current) {
           cameraAutoSetRef.current = false;
-          map.flyTo({ pitch: prevCameraRef.current.pitch, bearing: prevCameraRef.current.bearing, duration: 1000 });
+          map.flyTo({ pitch: prevCameraRef.current.pitch, duration: 1000 });
         }
       }
     };
