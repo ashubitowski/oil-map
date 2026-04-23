@@ -5,19 +5,35 @@ Source: PA Spatial Data Access, PADEP DEP MapServer layer 22
   https://mapservices.pasda.psu.edu/server/rest/services/pasda/DEP/MapServer/22
   ~224k conventional + unconventional wells. Updated frequently.
 
-No total-depth field in this dataset; depth_ft is always 0.
+The PASDA service has no depth field. Depths for Marcellus/Utica unconventional
+wells come from a FracFocus lookup table built by scripts/wells/pa_depths.py.
+Run that script first; it caches to data/raw/pa/pa_depths.json.
+Wells without a FracFocus match get depth_ft=0 (gray stub in 3D mode).
+
 SPUD_DATE is stored as Unix milliseconds (can be negative/pre-1970).
 """
 
 import json
 import urllib.parse
 import urllib.request
-from datetime import date, timezone, datetime
+from datetime import timezone, datetime
 from pathlib import Path
-from typing import Iterator, Optional, Union
+from typing import Iterator, Optional
 
 from scripts.wells.adapters.base import Adapter, BaseConfig
-from scripts.wells.schema import normalize_api, is_in_bounds
+from scripts.wells.schema import is_in_bounds
+
+_DEPTHS_PATH = Path("data/raw/pa/pa_depths.json")
+
+
+def _load_depths() -> dict[str, int]:
+    """Load the FracFocus permit→depth_ft lookup (built by pa_depths.py)."""
+    if not _DEPTHS_PATH.exists():
+        print(f"  [pa] No depth lookup found at {_DEPTHS_PATH}. Run scripts/wells/pa_depths.py first.")
+        return {}
+    data = json.loads(_DEPTHS_PATH.read_text())
+    print(f"  [pa] Loaded {len(data):,} depth records from FracFocus cache")
+    return data
 
 _SERVICE = (
     "https://mapservices.pasda.psu.edu/server/rest/services/pasda/DEP/MapServer/22/query"
@@ -114,6 +130,10 @@ def _fetch_all(out_jsonl: Path) -> None:
 
 
 class PAAdapter(Adapter):
+    def __init__(self, config: BaseConfig) -> None:
+        super().__init__(config)
+        self._depths: dict[str, int] = _load_depths()
+
     def download(self) -> Path:
         cfg = self.config
         out = cfg.raw_dir / "pa_features.jsonl"
@@ -156,11 +176,15 @@ class PAAdapter(Adapter):
         operator = str(row.get("OPERATOR") or "Unknown").strip() or "Unknown"
         county = str(row.get("COUNTY") or "Unknown").strip().title() or "Unknown"
 
+        # Look up depth from FracFocus cache; permit key is "CCC-NNNNN" (no leading zeros)
+        permit_key = f"{permit.split('-')[0]}-{int(permit.split('-')[1])}" if "-" in permit else permit
+        depth_ft = self._depths.get(permit_key, 0)
+
         return {
             "id": f"pa-{permit.replace(' ', '-')}",
             "lat": round(lat, 6),
             "lon": round(lon, 6),
-            "depth_ft": 0,
+            "depth_ft": depth_ft,
             "operator": operator,
             "spud_date": spud_date,
             "status": status,
