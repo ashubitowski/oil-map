@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://oil-map-git-main-andrews-projects-212d71a8.vercel.app";
+const BASE_URL = "https://oil-map.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

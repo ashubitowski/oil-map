@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const BASE_URL = "https://oil-map-git-main-andrews-projects-212d71a8.vercel.app";
+const BASE_URL = "https://oil-map.vercel.app";
 
 const jsonLd = {
   "@context": "https://schema.org",
