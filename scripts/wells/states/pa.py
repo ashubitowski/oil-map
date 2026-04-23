@@ -177,7 +177,11 @@ class PAAdapter(Adapter):
         county = str(row.get("COUNTY") or "Unknown").strip().title() or "Unknown"
 
         # Look up depth from FracFocus cache; permit key is "CCC-NNNNN" (no leading zeros)
-        permit_key = f"{permit.split('-')[0]}-{int(permit.split('-')[1])}" if "-" in permit else permit
+        parts = permit.split("-", 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            permit_key = f"{parts[0]}-{int(parts[1])}"
+        else:
+            permit_key = permit
         depth_ft = self._depths.get(permit_key, 0)
 
         return {

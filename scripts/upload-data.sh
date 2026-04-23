@@ -13,15 +13,22 @@
 #
 # Usage: sh scripts/upload-data.sh
 
-ACCOUNT_ID="${CF_ACCOUNT_ID:-YOUR_ACCOUNT_ID_HERE}"
 BUCKET="oil-map-data"
-ENDPOINT="https://${ACCOUNT_ID}.r2.cloudflarestorage.com"
 PROFILE="${AWS_PROFILE:-r2}"
+# Use endpoint_url from ~/.aws/config [profile r2] if CF_ACCOUNT_ID not set
+if [ -n "${CF_ACCOUNT_ID:-}" ]; then
+  ENDPOINT="https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com"
+else
+  ENDPOINT=""
+fi
 
 python3 scripts/wells/freshness.py
 
+ENDPOINT_ARG=""
+[ -n "${ENDPOINT}" ] && ENDPOINT_ARG="--endpoint-url ${ENDPOINT}"
+
 aws s3 sync public/data/ "s3://${BUCKET}/data/" \
-  --endpoint-url "${ENDPOINT}" \
+  ${ENDPOINT_ARG} \
   --profile "${PROFILE}" \
   --exclude "production-basins.json" \
   --exclude "production-history.json" \

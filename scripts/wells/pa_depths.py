@@ -25,27 +25,28 @@ import zipfile
 from pathlib import Path
 
 FRACFOCUS_URL = "https://www.fracfocusdata.org/digitaldownload/FracFocusCSV.zip"
+FRACFOCUS_CACHE = Path("/tmp/fracfocus.zip")
 OUT = Path("data/raw/pa/pa_depths.json")
-PA_STATE = "37"
+PA_STATE_NAME = "Pennsylvania"
 
 
 def _api_to_permit(api: str) -> str | None:
     """
-    Convert FracFocus API number to a PADEP-style permit key "CCC-NNNNN".
+    Convert a 14-digit FracFocus API number to a PADEP-style permit key "CCC-NNNNN".
 
-    FracFocus stores API as a 10-digit string: SSCCCPPPPP
-      SS  = state (37 for PA)
-      CCC = county FIPS (3 digits)
-      PPPPP = well/permit number (5 digits, may be zero-padded)
+    FracFocus format: SSCCCPPPPPSSSS  (14 chars)
+      SS    = state FIPS (37 for PA)
+      CCC   = county FIPS (3 digits)
+      PPPPP = well number (5 digits, may be zero-padded)
+      SSSS  = sidetrack/suffix (4 digits, usually 0000)
 
-    PADEP PERMIT_NUM format: "CCC-NNNNN" where NNNNN is NOT zero-padded.
+    PADEP PERMIT_NUM format: "CCC-NNNNN" where NNNNN has no leading zeros.
     """
     api = api.strip().replace("-", "").replace(" ", "")
-    if len(api) < 10 or not api.startswith(PA_STATE):
+    if len(api) < 10:
         return None
     county = api[2:5]
     well_raw = api[5:10]
-    # strip leading zeros to match PADEP's format
     well = str(int(well_raw)) if well_raw.isdigit() else well_raw
     return f"{county}-{well}"
 
@@ -58,43 +59,45 @@ def main() -> None:
         print(f"  Cached: {len(data):,} PA depth records at {OUT}  (delete to re-fetch)")
         return
 
-    print(f"  Downloading FracFocus CSV from {FRACFOCUS_URL} ...")
-    print("  (this is ~430 MB — will take a minute)")
-
     depths: dict[str, int] = {}
 
-    with urllib.request.urlopen(FRACFOCUS_URL, timeout=300) as resp:
-        raw = resp.read()
+    if FRACFOCUS_CACHE.exists():
+        print(f"  Using cached zip at {FRACFOCUS_CACHE}")
+        raw = FRACFOCUS_CACHE.read_bytes()
+    else:
+        print(f"  Downloading FracFocus CSV from {FRACFOCUS_URL} ...")
+        print("  (this is ~430 MB — will take a minute)")
+        with urllib.request.urlopen(FRACFOCUS_URL, timeout=300) as resp:
+            raw = resp.read()
+        FRACFOCUS_CACHE.write_bytes(raw)
 
-    print(f"  Downloaded {len(raw) / 1e6:.0f} MB; scanning PA records ...")
+    print(f"  {len(raw) / 1e6:.0f} MB loaded; reading DisclosureList ...")
 
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
-        csv_files = [n for n in zf.namelist() if n.lower().endswith(".csv")]
-        print(f"  {len(csv_files)} CSV file(s) in archive")
+        # DisclosureList_1.csv is the per-well file with TVD; Registry files are per-ingredient
+        disclosure_files = [n for n in zf.namelist() if "DisclosureList" in n and n.endswith(".csv")]
+        print(f"  {len(disclosure_files)} DisclosureList file(s) found")
 
-        for fname in csv_files:
+        for fname in disclosure_files:
             with zf.open(fname) as fh:
                 reader = csv.DictReader(io.TextIOWrapper(fh, encoding="utf-8-sig", errors="replace"))
                 for row in reader:
-                    state = (row.get("StateNumber") or row.get("state_number") or "").strip()
-                    if state != PA_STATE:
+                    if row.get("StateName") != PA_STATE_NAME:
                         continue
 
-                    api = row.get("APINumber") or row.get("api_number") or ""
+                    api = row.get("APINumber", "")
                     permit = _api_to_permit(api)
                     if not permit:
                         continue
 
-                    raw_depth = row.get("TotalVerticalDepth") or row.get("total_vertical_depth") or ""
+                    raw_depth = (row.get("TVD") or "").strip()
                     try:
-                        depth = int(float(raw_depth.strip()))
+                        depth = int(float(raw_depth))
                     except (ValueError, AttributeError):
                         continue
 
-                    if depth > 0:
-                        # Keep deepest value if permit appears more than once
-                        if depth > depths.get(permit, 0):
-                            depths[permit] = depth
+                    if 0 < depth <= 35000 and depth > depths.get(permit, 0):
+                        depths[permit] = depth
 
     print(f"  Matched {len(depths):,} PA wells with depth data")
     OUT.write_text(json.dumps(depths, indent=2))
