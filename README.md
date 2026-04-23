@@ -2,7 +2,7 @@
 
 An interactive map of 4.4 million US oil, gas, and water wells built with Next.js, MapLibre GL, and deck.gl — all public data, no API keys required.
 
-**Live:** [oil-map.vercel.app](https://oil-map-git-main-andrews-projects-212d71a8.vercel.app)
+**Live:** [oil-map.vercel.app](https://oil-map.vercel.app)
 
 ## Layers
 
