@@ -38,6 +38,7 @@ export const metadata: Metadata = {
   description:
     "Interactive map of 4.4 million oil, gas, and water wells across all 50 US states and federal offshore. Filter by status, toggle 3D depth columns, and explore shale plays and production data.",
   keywords: ["oil map", "gas wells", "US oil production", "shale plays", "Permian Basin", "Marcellus", "well data", "oil and gas"],
+  verification: { google: "DAuXdl1KLz3U2xdEqenV28CLcOnta4Ek5kRrxre0o8o" },
   authors: [{ name: "Andrew Shubitowski", url: "https://github.com/ashubitowski" }],
   openGraph: {
     type: "website",
