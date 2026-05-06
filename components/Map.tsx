@@ -170,25 +170,25 @@ export default function Map() {
           });
         } catch {}
 
-        // Create deck.gl overlay for 3D layers — skip on mobile to save GPU memory
+        // Create deck.gl overlay — always needed for 2D ScatterplotLayer rendering.
+        // On mobile, skip the LightingEffect to save GPU memory (no 3D anyway).
         const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-        if (!isTouchDevice) {
-          try {
-            const [{ MapboxOverlay }, { LightingEffect, AmbientLight, DirectionalLight }] = await Promise.all([
-              import("@deck.gl/mapbox"),
-              import("@deck.gl/core"),
-            ]);
-            const lightingEffect = new LightingEffect({
-              ambientLight: new AmbientLight({ color: [255, 230, 200], intensity: 0.55 }),
-              sunLight: new DirectionalLight({ color: [255, 220, 180], intensity: 1.6, direction: [-1, -3, -2] }),
-              rimLight: new DirectionalLight({ color: [120, 180, 255], intensity: 0.6, direction: [1, 2, -1] }),
-            });
-            const overlay = new MapboxOverlay({ layers: [], effects: [lightingEffect] });
-            map.addControl(overlay as unknown as import("maplibre-gl").IControl);
-            overlayRef.current = overlay as unknown as { setProps: (p: { layers: unknown[] }) => void };
-          } catch {
-            // deck.gl overlay unavailable — 3D wells will silently degrade
-          }
+        try {
+          const [{ MapboxOverlay }, coreModule] = await Promise.all([
+            import("@deck.gl/mapbox"),
+            import("@deck.gl/core"),
+          ]);
+          const { LightingEffect, AmbientLight, DirectionalLight } = coreModule;
+          const effects = isTouchDevice ? [] : [new LightingEffect({
+            ambientLight: new AmbientLight({ color: [255, 230, 200], intensity: 0.55 }),
+            sunLight: new DirectionalLight({ color: [255, 220, 180], intensity: 1.6, direction: [-1, -3, -2] }),
+            rimLight: new DirectionalLight({ color: [120, 180, 255], intensity: 0.6, direction: [1, 2, -1] }),
+          })];
+          const overlay = new MapboxOverlay({ layers: [], effects });
+          map.addControl(overlay as unknown as import("maplibre-gl").IControl);
+          overlayRef.current = overlay as unknown as { setProps: (p: { layers: unknown[] }) => void };
+        } catch {
+          // deck.gl overlay unavailable — wells will not render
         }
 
         setMapReady(true);
