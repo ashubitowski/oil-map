@@ -170,22 +170,25 @@ export default function Map() {
           });
         } catch {}
 
-        // Create deck.gl overlay for 3D layers
-        try {
-          const [{ MapboxOverlay }, { LightingEffect, AmbientLight, DirectionalLight }] = await Promise.all([
-            import("@deck.gl/mapbox"),
-            import("@deck.gl/core"),
-          ]);
-          const lightingEffect = new LightingEffect({
-            ambientLight: new AmbientLight({ color: [255, 230, 200], intensity: 0.55 }),
-            sunLight: new DirectionalLight({ color: [255, 220, 180], intensity: 1.6, direction: [-1, -3, -2] }),
-            rimLight: new DirectionalLight({ color: [120, 180, 255], intensity: 0.6, direction: [1, 2, -1] }),
-          });
-          const overlay = new MapboxOverlay({ layers: [], effects: [lightingEffect] });
-          map.addControl(overlay as unknown as import("maplibre-gl").IControl);
-          overlayRef.current = overlay as unknown as { setProps: (p: { layers: unknown[] }) => void };
-        } catch {
-          // deck.gl overlay unavailable — 3D wells will silently degrade
+        // Create deck.gl overlay for 3D layers — skip on mobile to save GPU memory
+        const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+        if (!isTouchDevice) {
+          try {
+            const [{ MapboxOverlay }, { LightingEffect, AmbientLight, DirectionalLight }] = await Promise.all([
+              import("@deck.gl/mapbox"),
+              import("@deck.gl/core"),
+            ]);
+            const lightingEffect = new LightingEffect({
+              ambientLight: new AmbientLight({ color: [255, 230, 200], intensity: 0.55 }),
+              sunLight: new DirectionalLight({ color: [255, 220, 180], intensity: 1.6, direction: [-1, -3, -2] }),
+              rimLight: new DirectionalLight({ color: [120, 180, 255], intensity: 0.6, direction: [1, 2, -1] }),
+            });
+            const overlay = new MapboxOverlay({ layers: [], effects: [lightingEffect] });
+            map.addControl(overlay as unknown as import("maplibre-gl").IControl);
+            overlayRef.current = overlay as unknown as { setProps: (p: { layers: unknown[] }) => void };
+          } catch {
+            // deck.gl overlay unavailable — 3D wells will silently degrade
+          }
         }
 
         setMapReady(true);
@@ -549,12 +552,22 @@ export default function Map() {
     };
     rebuildAndRenderRef.current = rebuildAndRender;
 
+    // iOS Safari has strict memory limits — cap concurrent state loads and require zoom-in before fetching binary data
+    const isMobile = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+    const MAX_CONCURRENT_LOADS = isMobile ? 2 : 6;
+    const MIN_ZOOM_FOR_STATE_LOAD = isMobile ? 5.5 : 4;
+
     // Start loading any manifest states whose bbox intersects the current viewport
     const checkViewport = () => {
       if (!manifestRef.current) return;
+      if (map.getZoom() < MIN_ZOOM_FOR_STATE_LOAD) { rebuildAndRender(); return; }
+
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
+
+      const currentlyLoading = Object.values(stateStatusRef.current).filter((s) => s === "loading").length;
+      if (currentlyLoading >= MAX_CONCURRENT_LOADS) return;
 
       let startedAny = false;
       for (const [key, entry] of Object.entries(manifestRef.current.states)) {
@@ -562,6 +575,9 @@ export default function Map() {
         if (entry.category === "water-other" && !layers.waterWells) continue;
         const [minLon, minLat, maxLon, maxLat] = entry.bbox;
         if (sw.lng >= maxLon || ne.lng <= minLon || sw.lat >= maxLat || ne.lat <= minLat) continue;
+
+        const loadingNow = Object.values(stateStatusRef.current).filter((s) => s === "loading").length;
+        if (loadingNow >= MAX_CONCURRENT_LOADS) break;
 
         stateStatusRef.current[key] = "loading";
         startedAny = true;
@@ -589,10 +605,13 @@ export default function Map() {
           stateStatusRef.current[key] = "loaded";
           setLoadingStates((prev) => prev.filter((k) => k !== key));
           rebuildAndRender();
+          // Drain the queue — load next visible state now that a slot freed up
+          checkViewport();
         }).catch((err) => {
           stateStatusRef.current[key] = "idle";
           setLoadingStates((prev) => prev.filter((k) => k !== key));
           reportLoadError(`wells-${key.toLowerCase()}`, err);
+          checkViewport();
         });
       }
 
@@ -600,14 +619,15 @@ export default function Map() {
       if (!startedAny) rebuildAndRender();
     };
 
-    // Free memory for states whose bbox no longer intersects the viewport (+ 50% padding per side)
+    // Free memory for states no longer in viewport. Mobile uses 0% padding to evict aggressively.
     const evictOffscreenStates = () => {
       if (!manifestRef.current) return;
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
-      const lngPad = (ne.lng - sw.lng) * 0.5;
-      const latPad = (ne.lat - sw.lat) * 0.5;
+      const padFactor = isMobile ? 0 : 0.5;
+      const lngPad = (ne.lng - sw.lng) * padFactor;
+      const latPad = (ne.lat - sw.lat) * padFactor;
       const extMinLng = sw.lng - lngPad;
       const extMaxLng = ne.lng + lngPad;
       const extMinLat = sw.lat - latPad;
