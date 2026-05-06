@@ -554,8 +554,8 @@ export default function Map() {
 
     // iOS Safari has strict memory limits — cap concurrent state loads and require zoom-in before fetching binary data
     const isMobile = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-    const MAX_CONCURRENT_LOADS = isMobile ? 2 : 6;
-    const MIN_ZOOM_FOR_STATE_LOAD = isMobile ? 5.5 : 4;
+    const MAX_CONCURRENT_LOADS = isMobile ? 2 : Infinity;
+    const MIN_ZOOM_FOR_STATE_LOAD = isMobile ? 5.5 : 0;
 
     // Start loading any manifest states whose bbox intersects the current viewport
     const checkViewport = () => {
