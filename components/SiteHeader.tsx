@@ -38,19 +38,6 @@ export default function SiteHeader() {
         {/* Share */}
         <ShareButton />
 
-        {/* Buy Me a Coffee */}
-        <a
-          href="https://buymeacoffee.com/shuby"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Buy me a coffee"
-          aria-label="Support on Buy Me a Coffee"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/20 transition-colors"
-        >
-          <span aria-hidden="true">☕</span>
-          <span className="hidden sm:inline">Support</span>
-        </a>
-
         {/* GitHub */}
         <a
           href="https://github.com/ashubitowski/oil-map"
