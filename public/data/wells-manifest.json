@@ -76,7 +76,7 @@
         42.1
       ],
       "count": 6220,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "DE": {
       "file": "wells-de.bin",
@@ -87,7 +87,7 @@
         39.8
       ],
       "count": 172985,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "FL": {
       "file": "wells-fl.bin",
@@ -100,17 +100,6 @@
       "count": 1334,
       "category": "oil-gas"
     },
-    "GA": {
-      "file": "wells-ga.bin",
-      "bbox": [
-        -85.6,
-        30.4,
-        -80.8,
-        35.0
-      ],
-      "count": 0,
-      "category": "oil-gas"
-    },
     "HI": {
       "file": "wells-hi.bin",
       "bbox": [
@@ -120,7 +109,7 @@
         22.2
       ],
       "count": 2145,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "IA": {
       "file": "wells-ia.bin",
@@ -208,7 +197,7 @@
         42.9
       ],
       "count": 127011,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "MD": {
       "file": "wells-md.bin",
@@ -230,7 +219,7 @@
         47.5
       ],
       "count": 94072,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "MI": {
       "file": "wells-mi.bin",
@@ -252,7 +241,7 @@
         49.4
       ],
       "count": 32341,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "MO": {
       "file": "wells-mo.bin",
@@ -263,7 +252,7 @@
         40.6
       ],
       "count": 10367,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "MS": {
       "file": "wells-ms.bin",
@@ -329,7 +318,7 @@
         45.3
       ],
       "count": 70068,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "NJ": {
       "file": "wells-nj.bin",
@@ -428,7 +417,7 @@
         42.0
       ],
       "count": 7350,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "SC": {
       "file": "wells-sc.bin",
@@ -439,7 +428,7 @@
         35.2
       ],
       "count": 14146,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "SD": {
       "file": "wells-sd.bin",
@@ -505,7 +494,7 @@
         45.0
       ],
       "count": 119206,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "WA": {
       "file": "wells-wa.bin",
@@ -516,7 +505,7 @@
         49.0
       ],
       "count": 809,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "WI": {
       "file": "wells-wi.bin",
@@ -527,7 +516,7 @@
         47.1
       ],
       "count": 650,
-      "category": "oil-gas"
+      "category": "water-other"
     },
     "WV": {
       "file": "wells-wv.bin",

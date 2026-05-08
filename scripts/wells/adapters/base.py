@@ -141,7 +141,7 @@ class Adapter(ABC):
             write_wells(wells, cfg.output)
             bin_path = cfg.output.with_suffix(".bin")
             write_wells_bin(wells, bin_path)
-            write_meta(cfg.state, cfg.source_label, cfg.url, len(wells), cfg.output)
+            write_meta(cfg.state, cfg.source_label, cfg.url, len(wells), cfg.output, cfg.category)
             update_manifest(cfg.state, bin_path.name, cfg.bounds, len(wells), cfg.category)
             print(f"  Wrote → {cfg.output} + {bin_path}")
 

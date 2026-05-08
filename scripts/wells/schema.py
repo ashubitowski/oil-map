@@ -112,7 +112,7 @@ def update_manifest(state: str, filename: str, bounds: tuple, count: int, catego
         json.dump(manifest, f, indent=2)
 
 
-def write_meta(state: str, source: str, url: str, count: int, output_path: Path) -> None:
+def write_meta(state: str, source: str, url: str, count: int, output_path: Path, category: str = "oil-gas") -> None:
     meta_path = output_path.parent / f"{output_path.stem}.meta.json"
     meta = {
         "state": state,
@@ -120,6 +120,7 @@ def write_meta(state: str, source: str, url: str, count: int, output_path: Path)
         "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "well_count": count,
         "url": url,
+        "category": category,
     }
     with open(meta_path, "w") as f:
         json.dump(meta, f)

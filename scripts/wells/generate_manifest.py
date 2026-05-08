@@ -66,6 +66,9 @@ _BBOXES: dict = {
     "WY":      [-111.1, 40.9, -104.0,  45.1],
 }
 
+# States whose wells are primarily water/monitoring — hidden by default
+_WATER_OTHER: set = {"CT", "DE", "HI", "MA", "ME", "MN", "MO", "NH", "RI", "SC", "VT", "WA", "WI"}
+
 # Map from config.state values → registry key (only where they differ)
 _STATE_TO_KEY = {"GOM": "OFFSHORE"}
 
@@ -84,11 +87,15 @@ def main() -> None:
         state_code = meta.get("state", "")
         registry_key = _STATE_TO_KEY.get(state_code, state_code)
         count = meta.get("well_count", 0)
-        category = meta.get("category", "oil-gas")
+        # Prefer category from meta.json; fall back to _WATER_OTHER lookup for stale files
+        category = meta.get("category") or ("water-other" if registry_key in _WATER_OTHER else "oil-gas")
         bbox = _BBOXES.get(registry_key)
 
         if not bbox:
             print(f"  {registry_key}: no bbox configured — skipping")
+            continue
+        if count == 0:
+            print(f"  {registry_key}: 0 wells — skipping")
             continue
 
         # Prefer .bin over .json for faster loading and 3D support
