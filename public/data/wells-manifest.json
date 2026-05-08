@@ -1,0 +1,555 @@
+{
+  "version": 1,
+  "states": {
+    "AK": {
+      "file": "wells-ak.bin",
+      "bbox": [
+        -169.5,
+        54.5,
+        -130.0,
+        71.5
+      ],
+      "count": 10156,
+      "category": "oil-gas"
+    },
+    "AL": {
+      "file": "wells-al.bin",
+      "bbox": [
+        -88.5,
+        30.1,
+        -84.9,
+        35.0
+      ],
+      "count": 15607,
+      "category": "oil-gas"
+    },
+    "AR": {
+      "file": "wells-ar.bin",
+      "bbox": [
+        -94.6,
+        33.0,
+        -89.6,
+        36.5
+      ],
+      "count": 33791,
+      "category": "oil-gas"
+    },
+    "AZ": {
+      "file": "wells-az.bin",
+      "bbox": [
+        -114.8,
+        31.3,
+        -109.0,
+        37.0
+      ],
+      "count": 1187,
+      "category": "oil-gas"
+    },
+    "CA": {
+      "file": "wells-ca.bin",
+      "bbox": [
+        -124.5,
+        32.5,
+        -114.1,
+        42.1
+      ],
+      "count": 242237,
+      "category": "oil-gas"
+    },
+    "CO": {
+      "file": "wells-co.bin",
+      "bbox": [
+        -109.1,
+        37.0,
+        -102.0,
+        41.1
+      ],
+      "count": 96965,
+      "category": "oil-gas"
+    },
+    "CT": {
+      "file": "wells-ct.bin",
+      "bbox": [
+        -73.7,
+        41.0,
+        -71.8,
+        42.1
+      ],
+      "count": 6220,
+      "category": "oil-gas"
+    },
+    "DE": {
+      "file": "wells-de.bin",
+      "bbox": [
+        -75.8,
+        38.5,
+        -75.0,
+        39.8
+      ],
+      "count": 172985,
+      "category": "oil-gas"
+    },
+    "FL": {
+      "file": "wells-fl.bin",
+      "bbox": [
+        -87.6,
+        24.4,
+        -80.0,
+        31.0
+      ],
+      "count": 1334,
+      "category": "oil-gas"
+    },
+    "GA": {
+      "file": "wells-ga.bin",
+      "bbox": [
+        -85.6,
+        30.4,
+        -80.8,
+        35.0
+      ],
+      "count": 0,
+      "category": "oil-gas"
+    },
+    "HI": {
+      "file": "wells-hi.bin",
+      "bbox": [
+        -160.2,
+        18.9,
+        -154.8,
+        22.2
+      ],
+      "count": 2145,
+      "category": "oil-gas"
+    },
+    "IA": {
+      "file": "wells-ia.bin",
+      "bbox": [
+        -96.6,
+        40.4,
+        -90.1,
+        43.5
+      ],
+      "count": 868,
+      "category": "oil-gas"
+    },
+    "ID": {
+      "file": "wells-id.bin",
+      "bbox": [
+        -117.2,
+        42.0,
+        -111.0,
+        49.0
+      ],
+      "count": 211,
+      "category": "oil-gas"
+    },
+    "IL": {
+      "file": "wells-il.bin",
+      "bbox": [
+        -91.5,
+        36.9,
+        -87.5,
+        42.5
+      ],
+      "count": 206941,
+      "category": "oil-gas"
+    },
+    "IN": {
+      "file": "wells-in.bin",
+      "bbox": [
+        -88.1,
+        37.8,
+        -84.8,
+        41.8
+      ],
+      "count": 76418,
+      "category": "oil-gas"
+    },
+    "KS": {
+      "file": "wells-ks.bin",
+      "bbox": [
+        -102.1,
+        37.0,
+        -94.6,
+        40.1
+      ],
+      "count": 265255,
+      "category": "oil-gas"
+    },
+    "KY": {
+      "file": "wells-ky.bin",
+      "bbox": [
+        -89.6,
+        36.5,
+        -81.9,
+        39.2
+      ],
+      "count": 122460,
+      "category": "oil-gas"
+    },
+    "LA": {
+      "file": "wells-la.bin",
+      "bbox": [
+        -94.1,
+        28.9,
+        -89.0,
+        33.1
+      ],
+      "count": 208884,
+      "category": "oil-gas"
+    },
+    "MA": {
+      "file": "wells-ma.bin",
+      "bbox": [
+        -73.5,
+        41.2,
+        -69.9,
+        42.9
+      ],
+      "count": 127011,
+      "category": "oil-gas"
+    },
+    "MD": {
+      "file": "wells-md.bin",
+      "bbox": [
+        -79.5,
+        37.9,
+        -75.0,
+        39.7
+      ],
+      "count": 175,
+      "category": "oil-gas"
+    },
+    "ME": {
+      "file": "wells-me.bin",
+      "bbox": [
+        -71.1,
+        43.1,
+        -66.9,
+        47.5
+      ],
+      "count": 94072,
+      "category": "oil-gas"
+    },
+    "MI": {
+      "file": "wells-mi.bin",
+      "bbox": [
+        -90.5,
+        41.7,
+        -82.4,
+        48.3
+      ],
+      "count": 92537,
+      "category": "oil-gas"
+    },
+    "MN": {
+      "file": "wells-mn.bin",
+      "bbox": [
+        -97.2,
+        43.5,
+        -89.5,
+        49.4
+      ],
+      "count": 32341,
+      "category": "oil-gas"
+    },
+    "MO": {
+      "file": "wells-mo.bin",
+      "bbox": [
+        -95.8,
+        35.9,
+        -89.1,
+        40.6
+      ],
+      "count": 10367,
+      "category": "oil-gas"
+    },
+    "MS": {
+      "file": "wells-ms.bin",
+      "bbox": [
+        -91.7,
+        30.2,
+        -88.1,
+        35.0
+      ],
+      "count": 25266,
+      "category": "oil-gas"
+    },
+    "MT": {
+      "file": "wells-mt.bin",
+      "bbox": [
+        -116.1,
+        44.4,
+        -104.0,
+        49.1
+      ],
+      "count": 41943,
+      "category": "oil-gas"
+    },
+    "NC": {
+      "file": "wells-nc.bin",
+      "bbox": [
+        -84.3,
+        33.8,
+        -75.5,
+        36.6
+      ],
+      "count": 882,
+      "category": "oil-gas"
+    },
+    "ND": {
+      "file": "wells-nd.bin",
+      "bbox": [
+        -104.1,
+        45.9,
+        -96.5,
+        49.1
+      ],
+      "count": 35678,
+      "category": "oil-gas"
+    },
+    "NE": {
+      "file": "wells-ne.bin",
+      "bbox": [
+        -104.1,
+        40.0,
+        -95.3,
+        43.0
+      ],
+      "count": 22575,
+      "category": "oil-gas"
+    },
+    "NH": {
+      "file": "wells-nh.bin",
+      "bbox": [
+        -72.6,
+        42.7,
+        -70.6,
+        45.3
+      ],
+      "count": 70068,
+      "category": "oil-gas"
+    },
+    "NJ": {
+      "file": "wells-nj.bin",
+      "bbox": [
+        -75.6,
+        38.9,
+        -73.9,
+        41.4
+      ],
+      "count": 36,
+      "category": "oil-gas"
+    },
+    "NM": {
+      "file": "wells-nm.bin",
+      "bbox": [
+        -109.1,
+        31.3,
+        -103.0,
+        37.1
+      ],
+      "count": 82070,
+      "category": "oil-gas"
+    },
+    "NV": {
+      "file": "wells-nv.bin",
+      "bbox": [
+        -120.0,
+        35.0,
+        -114.0,
+        42.0
+      ],
+      "count": 741,
+      "category": "oil-gas"
+    },
+    "NY": {
+      "file": "wells-ny.bin",
+      "bbox": [
+        -79.8,
+        40.5,
+        -71.9,
+        45.0
+      ],
+      "count": 46293,
+      "category": "oil-gas"
+    },
+    "OH": {
+      "file": "wells-oh.bin",
+      "bbox": [
+        -84.9,
+        38.4,
+        -80.5,
+        42.0
+      ],
+      "count": 238562,
+      "category": "oil-gas"
+    },
+    "OK": {
+      "file": "wells-ok.bin",
+      "bbox": [
+        -103.0,
+        33.6,
+        -94.4,
+        37.1
+      ],
+      "count": 441786,
+      "category": "oil-gas"
+    },
+    "OR": {
+      "file": "wells-or.bin",
+      "bbox": [
+        -124.6,
+        42.0,
+        -116.5,
+        46.3
+      ],
+      "count": 662,
+      "category": "oil-gas"
+    },
+    "PA": {
+      "file": "wells-pa.bin",
+      "bbox": [
+        -80.5,
+        39.7,
+        -74.7,
+        42.3
+      ],
+      "count": 223027,
+      "category": "oil-gas"
+    },
+    "RI": {
+      "file": "wells-ri.bin",
+      "bbox": [
+        -71.9,
+        41.1,
+        -71.1,
+        42.0
+      ],
+      "count": 7350,
+      "category": "oil-gas"
+    },
+    "SC": {
+      "file": "wells-sc.bin",
+      "bbox": [
+        -83.4,
+        32.0,
+        -78.5,
+        35.2
+      ],
+      "count": 14146,
+      "category": "oil-gas"
+    },
+    "SD": {
+      "file": "wells-sd.bin",
+      "bbox": [
+        -104.1,
+        42.5,
+        -96.4,
+        45.9
+      ],
+      "count": 451,
+      "category": "oil-gas"
+    },
+    "TN": {
+      "file": "wells-tn.bin",
+      "bbox": [
+        -90.3,
+        35.0,
+        -81.6,
+        36.7
+      ],
+      "count": 16413,
+      "category": "oil-gas"
+    },
+    "TX": {
+      "file": "wells-tx.bin",
+      "bbox": [
+        -106.7,
+        25.8,
+        -93.5,
+        36.5
+      ],
+      "count": 964374,
+      "category": "oil-gas"
+    },
+    "UT": {
+      "file": "wells-ut.bin",
+      "bbox": [
+        -114.1,
+        37.0,
+        -109.0,
+        42.1
+      ],
+      "count": 39475,
+      "category": "oil-gas"
+    },
+    "VA": {
+      "file": "wells-va.bin",
+      "bbox": [
+        -83.7,
+        36.5,
+        -75.2,
+        39.5
+      ],
+      "count": 10868,
+      "category": "oil-gas"
+    },
+    "VT": {
+      "file": "wells-vt.bin",
+      "bbox": [
+        -73.4,
+        42.7,
+        -71.5,
+        45.0
+      ],
+      "count": 119206,
+      "category": "oil-gas"
+    },
+    "WA": {
+      "file": "wells-wa.bin",
+      "bbox": [
+        -124.7,
+        45.5,
+        -116.9,
+        49.0
+      ],
+      "count": 809,
+      "category": "oil-gas"
+    },
+    "WI": {
+      "file": "wells-wi.bin",
+      "bbox": [
+        -92.9,
+        42.5,
+        -86.8,
+        47.1
+      ],
+      "count": 650,
+      "category": "oil-gas"
+    },
+    "WV": {
+      "file": "wells-wv.bin",
+      "bbox": [
+        -82.7,
+        37.2,
+        -77.7,
+        40.6
+      ],
+      "count": 114377,
+      "category": "oil-gas"
+    },
+    "WY": {
+      "file": "wells-wy.bin",
+      "bbox": [
+        -111.1,
+        40.9,
+        -104.0,
+        45.1
+      ],
+      "count": 68386,
+      "category": "oil-gas"
+    }
+  }
+}
